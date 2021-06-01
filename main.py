@@ -2,6 +2,36 @@ import pygame, sys, random
 
 from pygame.locals import *
 from datetime import datetime
+from time import sleep
+from os import remove
+
+
+
+
+pygame.init()
+clock = pygame.time.Clock()
+
+width = 800
+height = 600
+
+res = (width, height)
+
+screen = pygame.display.set_mode(res)
+pygame.display.set_caption('Test Game')
+
+clouds = pygame.sprite.Group()
+platforms = pygame.sprite.Group()
+all_sprites = pygame.sprite.Group()
+danger = pygame.sprite.Group()
+
+BG = (52, 164, 235)
+
+PlayerSpeed = 5
+
+FPS = 120
+
+vec = pygame.math.Vector2
+highscore = vec(0, 0)
 
 class Clouds(pygame.sprite.Sprite):
 	def __init__(self, pos):
@@ -25,29 +55,30 @@ class Clouds(pygame.sprite.Sprite):
 		self.rect.center = (x, y)
 
 class Platform(pygame.sprite.Sprite):
-	def __init__(self):
+	def __init__(self, Landable):
 		super().__init__()
 
-		self.image = pygame.image.load('platform.png')
+		if Landable:
+			self.image = pygame.image.load('platform_' + str(random.randint(0, 1)) + '.png')
+		else:
+			self.image = pygame.image.load('death.png')
 
 		self.rect = self.image.get_rect()
-		self.rect.topleft = (random.randrange(width, width * 1.5), random.randrange(height * 1//3, height))
+		self.rect.center = (random.randrange(width * 1.25, width * 2), random.randrange(height * 1//3, height))
+		self.pos = vec((self.rect.center))
 
 
 class Player(pygame.sprite.Sprite):
 	def __init__(self):
 		super().__init__()
 
-		self.image = pygame.Surface((20, 40))
+		self.image = pygame.Surface((40, 40))
 		self.image.fill((0, 255, 0))
 
 		self.rect = self.image.get_rect()
 
 		self.acc = 2
-		self.length = 0
-
-		self.start = vec(0, 0)
-		self.stop = vec(self.rect.center)
+		self.relpos = vec(self.rect.center)
 
 		self.jumpstate = False
 
@@ -64,14 +95,17 @@ class Player(pygame.sprite.Sprite):
 			if y <= py:
 				if keys[K_LEFT]:
 					x -= PlayerSpeed
+					self.relpos.x -= PlayerSpeed
 				if keys[K_RIGHT]:
+					self.relpos.x += PlayerSpeed
 					x+=PlayerSpeed
 		else:
 			if keys[K_LEFT]:
 				x -= PlayerSpeed
+				self.relpos.x -= PlayerSpeed
 			if keys[K_RIGHT]:
-				x+=PlayerSpeed
-
+				x += PlayerSpeed
+				self.relpos.x += PlayerSpeed
 
 		self.rect.center = (x, y)
 
@@ -90,16 +124,16 @@ class Player(pygame.sprite.Sprite):
 		self.rect.center = (x, y)
 
 	def gravity(self):
-		x, y = self.rect.midbottom
+		x, y = self.rect.center
 
 		if not pygame.sprite.spritecollide(self, platforms, False):
 			y += self.acc
 			self.acc += 0.5
 
-			self.rect.midbottom = (x, y)
+			self.rect.center = (x, y)
 		else:
 			self.acc = 0
-			self.rect.midbottom = (x, y)
+			self.rect.center = (x, y)
 
 
 	def update(self):
@@ -120,34 +154,16 @@ class Player(pygame.sprite.Sprite):
 		if self.jumpstate:
 			if pygame.sprite.spritecollide(self, platforms, False):
 				self.points += 1
+class HighScoreLine(pygame.sprite.Sprite):
+	def __init__(self):
+		super().__init__()
 
+		self.image = pygame.Surface((20, height))
+		self.image.fill((50, 50, 255))
 
-
-vec = pygame.math.Vector2
-highscore = vec(0, 0)
-
-
-pygame.init()
-clock = pygame.time.Clock()
-
-width = 800
-height = 600
-
-res = (width, height)
-
-screen = pygame.display.set_mode(res)
-pygame.display.set_caption('Test Game')
-
-clouds = pygame.sprite.Group()
-platforms = pygame.sprite.Group()
-all_sprites = pygame.sprite.Group()
-
-BG = (52, 164, 235)
-
-PlayerSpeed = 5
-
-FPS = 120
-
+		self.rect = self.image.get_rect()
+		self.rect.center = (highscore.x, height/2)
+		self.x, self.y = self.rect.center
 
 def main():
 
@@ -158,17 +174,18 @@ def main():
 			all_sprites.add(new_cloud)
 
 
+	global highscore
 
+
+	scoreLine = HighScoreLine()
+	all_sprites.add(scoreLine)
 
 	# defining player
 	p1 = Player()
-
-
 	all_sprites.add(p1)
-	# flag = Goal()
 
 	# Defining ground platform
-	plat1 = Platform()
+	plat1 = Platform(True)
 
 	plat1.image = pygame.transform.scale(plat1.image, (width, plat1.image.get_height()))
 	plat1.rect = plat1.image.get_rect()
@@ -180,10 +197,6 @@ def main():
 	platx, platy = plat1.rect.center
 
 	p1.start = vec(platx, platy)
-	'''
-	platforms.add(flag)
-	all_sprites.add(flag)
-	'''
 
 	while True:
 		for event in pygame.event.get():
@@ -202,14 +215,29 @@ def main():
 				px -= PlayerSpeed
 				plat.rect.center = (px, py)
 
-			for i in range(2):
-				new_plat = Platform()
+			if x < highscore.x:
+				highscore.x -= PlayerSpeed
+
+
+
+			for i in range(1):
+				random.seed(datetime.now())
+
+				choice = random.randint(0, 8)
+
+				if choice == 0:
+					new_plat = Platform(False)
+					danger.add(new_plat)
+				else :
+					new_plat = Platform(True)
+
+
+
 				if not pygame.sprite.spritecollide(new_plat, platforms, False):
 					platforms.add(new_plat)
 					all_sprites.add(new_plat)
 				else:
 					new_plat.kill()
-
 
 		if x < width * 1//3:
 			for plat in platforms:
@@ -217,9 +245,8 @@ def main():
 				px += PlayerSpeed
 				plat.rect.center = (px, py)
 
-
-		if y > height:
-			gameOver(p1)
+		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False):
+			gameOver(p1, highscore)
 
 		i = 0
 		for plat in platforms:
@@ -230,6 +257,14 @@ def main():
 			elif px <= 0 or i > 10:
 				plat.kill()
 
+		if p1.relpos.x >= highscore.x:
+			highscore.x = p1.relpos.x
+			scoreLine.x = x
+		else:
+			scoreLine.x = highscore.x
+
+		scoreLine.rect.center = (scoreLine.x, height//2)
+
 		clouds.update()
 		p1.update()
 
@@ -239,6 +274,7 @@ def main():
 		clock.tick(FPS)
 
 def startScreen():
+
 	header = pygame.font.Font('pixelart.ttf', 50)
 	sub = pygame.font.Font('pixelart.ttf', 25)
 
@@ -276,6 +312,7 @@ def startScreen():
 				pygame.quit()
 				sys.exit()
 			if event.type == KEYDOWN:
+
 				if key[K_UP]:
 					y -= 20
 				if key[K_DOWN]:
@@ -287,13 +324,14 @@ def startScreen():
 						sys.exit()
 					elif y == sy:
 						main()
-
 					break
 
-			if y > ey:
-				y = sy
-			if y < sy:
-				s = ey
+				if y > ey:
+					y = sy
+				if y < sy:
+					s = ey
+
+
 
 
 
@@ -310,23 +348,27 @@ def startScreen():
 		pygame.display.update()
 
 
-def gameOver(p1):
+def gameOver(p1, highscore):
+	sleep(0.25)
+
 	header = pygame.font.Font('pixelart.ttf', 40)
 	sub = pygame.font.Font('pixelart.ttf', 20)
 
-	text = header.render('Game Over: ' + str(int(p1.start.distance_to(p1.stop)//100)), BG, (255, 255, 255))
+	text = header.render('Game Over: ' + str(p1.relpos.x), BG, (255, 255, 255))
 	text2 = sub.render('Press anything to continue', BG, (255, 255, 255))
+	score = sub.render('Current Highscore: ' + str(highscore.x), BG, (255, 255, 255))
 
 	textRect = text.get_rect()
-	text2Rect = text.get_rect()
+	text2Rect = text2.get_rect()
+	scoreRect = score.get_rect()
 
 	textRect.midbottom = (width // 2, height//3)
 	text2Rect.midbottom = (width // 2, height * 3//6)
+	scoreRect.midbottom = (width // 2, height * 3//12)
 
 	screen.blit(text, textRect)
+	screen.blit(score, scoreRect)
 	screen.blit(text2, text2Rect)
-
-	highscore = p1.stop
 
 	while True:
 		for event in pygame.event.get():
