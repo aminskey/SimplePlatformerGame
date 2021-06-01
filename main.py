@@ -9,10 +9,13 @@ from os import remove
 
 
 pygame.init()
+pygame.mixer.init
+
 clock = pygame.time.Clock()
 
 width = 800
 height = 600
+
 
 res = (width, height)
 
@@ -32,6 +35,8 @@ FPS = 120
 
 vec = pygame.math.Vector2
 highscore = vec(0, 0)
+
+pygame.mixer.music.load('bgmusic.ogg')
 
 class Clouds(pygame.sprite.Sprite):
 	def __init__(self, pos):
@@ -80,6 +85,11 @@ class Player(pygame.sprite.Sprite):
 		self.acc = 2
 		self.relpos = vec(self.rect.center)
 
+		self.sound = pygame.mixer.Sound('jump.ogg')
+
+		pygame.mixer.Sound.set_volume(self.sound, 0.1)
+
+
 		self.jumpstate = False
 
 	def move(self):
@@ -93,19 +103,11 @@ class Player(pygame.sprite.Sprite):
 			px, py = plat[0].rect.topleft
 
 			if y <= py:
-				if keys[K_LEFT]:
-					x -= PlayerSpeed
-					self.relpos.x -= PlayerSpeed
-				if keys[K_RIGHT]:
-					self.relpos.x += PlayerSpeed
-					x+=PlayerSpeed
-		else:
-			if keys[K_LEFT]:
-				x -= PlayerSpeed
-				self.relpos.x -= PlayerSpeed
-			if keys[K_RIGHT]:
-				x += PlayerSpeed
+				x+=PlayerSpeed
 				self.relpos.x += PlayerSpeed
+		else:
+			x+=PlayerSpeed
+			self.relpos.x += PlayerSpeed
 
 		self.rect.center = (x, y)
 
@@ -116,14 +118,15 @@ class Player(pygame.sprite.Sprite):
 
 		keys = pygame.key.get_pressed()
 
+
 		if keys[K_SPACE]:
-			self.jumpstate = True
+			self.sound.play()
 			y -= 20
-			self.jumpstate = False
 
 		self.rect.center = (x, y)
 
 	def gravity(self):
+
 		x, y = self.rect.center
 
 		if not pygame.sprite.spritecollide(self, platforms, False):
@@ -132,6 +135,7 @@ class Player(pygame.sprite.Sprite):
 
 			self.rect.center = (x, y)
 		else:
+			self.sound.stop()
 			self.acc = 0
 			self.rect.center = (x, y)
 
@@ -147,13 +151,12 @@ class Player(pygame.sprite.Sprite):
 
 		self.rect.center = (x, y)
 
+
 		self.move()
 		self.jump()
 		self.gravity()
 
-		if self.jumpstate:
-			if pygame.sprite.spritecollide(self, platforms, False):
-				self.points += 1
+
 class HighScoreLine(pygame.sprite.Sprite):
 	def __init__(self):
 		super().__init__()
@@ -164,6 +167,7 @@ class HighScoreLine(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.rect.center = (highscore.x, height/2)
 		self.x, self.y = self.rect.center
+
 
 def main():
 
@@ -198,6 +202,8 @@ def main():
 
 	p1.start = vec(platx, platy)
 
+	pygame.mixer.music.play(-1, 0)
+
 	while True:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -215,10 +221,8 @@ def main():
 				px -= PlayerSpeed
 				plat.rect.center = (px, py)
 
-			if x < highscore.x:
-				highscore.x -= PlayerSpeed
-
-
+			if x > scoreLine.x:
+				scoreLine.x -= PlayerSpeed
 
 			for i in range(1):
 				random.seed(datetime.now())
@@ -320,6 +324,7 @@ def startScreen():
 
 				if key[K_RETURN]:
 					if y == ey:
+						pygame.mixer.music.unload()
 						pygame.quit()
 						sys.exit()
 					elif y == sy:
@@ -350,6 +355,8 @@ def startScreen():
 
 def gameOver(p1, highscore):
 	sleep(0.25)
+
+	pygame.mixer.music.stop()
 
 	header = pygame.font.Font('pixelart.ttf', 40)
 	sub = pygame.font.Font('pixelart.ttf', 20)
