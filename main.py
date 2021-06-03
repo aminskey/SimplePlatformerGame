@@ -29,7 +29,7 @@ danger = pygame.sprite.Group()
 
 BG = (52, 164, 235)
 
-PlayerSpeed = 5
+PlayerSpeed = 6
 
 FPS = 120
 
@@ -82,12 +82,14 @@ class Player(pygame.sprite.Sprite):
 
 		self.rect = self.image.get_rect()
 
+		self.rect.center = (width//2, 0)
+
 		self.acc = 2
 		self.relpos = vec(self.rect.center)
 
 		self.sound = pygame.mixer.Sound('jump.ogg')
 
-		pygame.mixer.Sound.set_volume(self.sound, 0.1)
+		pygame.mixer.Sound.set_volume(self.sound, 0.04)
 
 
 		self.jumpstate = False
@@ -142,17 +144,27 @@ class Player(pygame.sprite.Sprite):
 
 	def update(self):
 
-		x, y = self.rect.center
+		x, y = self.rect.topright
 
 		if x > width * 2//3:
 			x = width * 2//3
-		if x < width * 1//3:
-			x = width * 1//3
 
-		self.rect.center = (x, y)
+		self.rect.topright = (x, y)
 
 
-		self.move()
+		if pygame.sprite.spritecollide(self, platforms, False):
+			plats = pygame.sprite.spritecollide(self, platforms, False)
+			plat = plats[-1]
+			platx, platy = plat.rect.midtop
+
+			if y > platy:
+				self.rect.topright = (platx, y)
+
+
+		self.relpos.x += PlayerSpeed
+
+
+#		self.move()
 		self.jump()
 		self.gravity()
 
@@ -215,41 +227,35 @@ def main():
 
 		x, y = p1.rect.center
 
-		if x > width * 2//3:
-			for plat in platforms:
-				px, py = plat.rect.center
-				px -= PlayerSpeed
-				plat.rect.center = (px, py)
+		for plat in platforms:
+			px, py = plat.rect.center
+			px -= PlayerSpeed
+			plat.rect.center = (px, py)
 
-			if x > scoreLine.x:
-				scoreLine.x -= PlayerSpeed
+		if x > scoreLine.x:
+			scoreLine.x -= PlayerSpeed
 
-			for i in range(1):
-				random.seed(datetime.now())
+		for i in range(1):
+			random.seed(datetime.now())
 
-				choice = random.randint(0, 8)
+			choice = random.randint(0, 8)
 
-				if choice == 0:
-					new_plat = Platform(False)
-					danger.add(new_plat)
-				else :
-					new_plat = Platform(True)
-
+			if choice == 0:
+				new_plat = Platform(False)
+				danger.add(new_plat)
+			else :
+				new_plat = Platform(True)
 
 
-				if not pygame.sprite.spritecollide(new_plat, platforms, False):
-					platforms.add(new_plat)
-					all_sprites.add(new_plat)
-				else:
-					new_plat.kill()
 
-		if x < width * 1//3:
-			for plat in platforms:
-				px, py = plat.rect.center
-				px += PlayerSpeed
-				plat.rect.center = (px, py)
+			if not pygame.sprite.spritecollide(new_plat, platforms, False):
+				platforms.add(new_plat)
+				all_sprites.add(new_plat)
+			else:
+				new_plat.kill()
 
-		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False):
+
+		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False) or x < 0:
 			gameOver(p1, highscore)
 
 		i = 0
@@ -380,6 +386,7 @@ def gameOver(p1, highscore):
 	while True:
 		for event in pygame.event.get():
 			if event.type == pygame.KEYDOWN:
+				sleep(0.25)
 				for sprite in all_sprites:
 					sprite.kill()
 				startScreen()
