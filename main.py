@@ -28,8 +28,9 @@ all_sprites = pygame.sprite.Group()
 danger = pygame.sprite.Group()
 
 BG = (52, 164, 235)
+BG2 = (100, 100, 255)
 
-PSD = 5.5
+PSD = 6
 PlayerSpeed = PSD
 
 
@@ -239,11 +240,28 @@ def main():
 
 	platx, platy = plat1.rect.center
 
-	p1.start = vec(platx, platy)
-
 	pygame.mixer.music.play(-1, 0)
 
+
+	sub = pygame.font.Font('pixelart.ttf', 25)
+
+	hs = sub.render('Current Highscore: ' + str(highscore.x), BG2, (55,55,255))
+
+	hsRect = hs.get_rect()
+	hsRect.center = (width//2, hs.get_height())
+
+
 	while True:
+
+		score1 = sub.render('Player Score', BG2, (55,55,255))
+		score2 = sub.render(str(p1.relpos.x), BG2, (55,55,255))
+
+		score1Rect = score1.get_rect()
+		score2Rect = score2.get_rect()
+
+		score1Rect.center = (width * 6//16, score1.get_height()*2)
+		score2Rect.center = (width  * 11//16, score2.get_height()*2)
+
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				pygame.quit()
@@ -301,8 +319,8 @@ def main():
 		else:
 			scoreLine.x = highscore.x
 
-		if p1.relpos.x % 5000 == 0 and p1.relpos.x != 0:
-			PlayerSpeed += 0.75
+		if p1.relpos.x % 10000 == 0 and p1.relpos.x != 0:
+			PlayerSpeed += 1
 
 		scoreLine.rect.center = (scoreLine.x, height//2)
 
@@ -310,6 +328,11 @@ def main():
 		p1.update()
 
 		all_sprites.draw(screen)
+
+		screen.blit(hs, hsRect)
+
+		screen.blit(score1, score1Rect)
+		screen.blit(score2, score2Rect)
 
 		pygame.display.update()
 		clock.tick(FPS)
@@ -396,6 +419,9 @@ def startScreen():
 
 
 def gameOver(p1, highscore):
+	if p1.relpos.x >= highscore.x:
+		highscore.x = p1.relpos.x
+
 	sleep(0.5)
 
 	pygame.mixer.music.stop()
