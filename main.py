@@ -188,24 +188,11 @@ class HighScoreLine(pygame.sprite.Sprite):
 		super().__init__()
 
 		self.image = pygame.Surface((20, height))
-		self.image.fill((50, 50, 255))
+		self.image.fill((100, 100, 255))
 
 		self.rect = self.image.get_rect()
 		self.rect.center = (highscore.x, height/2)
 		self.x, self.y = self.rect.center
-
-class PauseScreen(pygame.sprite.Sprite):
-	def __init__(self):
-		super().__init__()
-
-		self.image = pygame.Surface((res))
-		self.image.fill((0, 0, 0))
-		self.image.set_alpha(0)
-
-		self.rect = self.image.get_rect()
-		self.rect.topleft = (0, 0)
-		self.x, self.y = self.rect.center
-
 
 def main():
 	pygame.mixer.music.load('song-' + str(random.randint(0, 3)) +'.ogg')
@@ -245,13 +232,19 @@ def main():
 
 	sub = pygame.font.Font('pixelart.ttf', 25)
 
-	hs = sub.render('Current Highscore: ' + str(highscore.x), BG2, (55,55,255))
-
-	hsRect = hs.get_rect()
-	hsRect.center = (width//2, hs.get_height())
-
-
 	while True:
+
+		hs1 = sub.render('Current Highscore: ', BG2, (55,55,255))
+		hs2 = sub.render(str(highscore.x), BG2, (55, 55, 255))
+
+		hs1Rect = hs1.get_rect()
+		hs2Rect = hs2.get_rect()
+
+		hs1Rect.center = (width * 6//16, hs1.get_height())
+		hs2Rect.center = (width * 11//16, hs2.get_height())
+
+
+
 
 		score1 = sub.render('Player Score', BG2, (55,55,255))
 		score2 = sub.render(str(p1.relpos.x), BG2, (55,55,255))
@@ -329,7 +322,8 @@ def main():
 
 		all_sprites.draw(screen)
 
-		screen.blit(hs, hsRect)
+		screen.blit(hs1, hs1Rect)
+		screen.blit(hs2, hs2Rect)
 
 		screen.blit(score1, score1Rect)
 		screen.blit(score2, score2Rect)
