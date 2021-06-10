@@ -30,6 +30,7 @@ danger = pygame.sprite.Group()
 BG = (52, 164, 235)
 BG2 = (100, 100, 255)
 
+pygame.mouse.set_visible(False)
 PSD = 6
 PlayerSpeed = PSD
 
@@ -125,9 +126,10 @@ class Player(pygame.sprite.Sprite):
 
 
 		keys = pygame.key.get_pressed()
+		mkeys = pygame.mouse.get_pressed()
 
 
-		if keys[K_SPACE]:
+		if keys[K_SPACE] or mkeys[0]:
 			self.sound.play()
 			y -= 20
 
@@ -188,7 +190,9 @@ class HighScoreLine(pygame.sprite.Sprite):
 		super().__init__()
 
 		self.image = pygame.Surface((20, height))
-		self.image.fill((100, 100, 255))
+		self.image.fill((10, 10, 255))
+
+		self.image.set_alpha(50)
 
 		self.rect = self.image.get_rect()
 		self.rect.center = (highscore.x, height/2)
@@ -285,13 +289,11 @@ def main():
 				new_plat = Platform(True)
 
 
-
 			if not pygame.sprite.spritecollide(new_plat, platforms, False):
 				platforms.add(new_plat)
 				all_sprites.add(new_plat)
 			else:
 				new_plat.kill()
-
 
 		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False) or x < 0:
 			PlayerSpeed = PSD
@@ -341,7 +343,7 @@ def startScreen():
 	start = sub.render('Start', BG, (255, 255, 255))
 	exit = sub.render('Quit', BG, (255, 255, 255))
 
-	cursor = sub.render('->', BG, (155, 255, 200))
+	cursor = sub.render('->', BG, (100, 255, 100))
 
 	titleRect = title.get_rect()
 
