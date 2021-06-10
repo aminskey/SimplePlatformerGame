@@ -2,7 +2,7 @@ import pygame, sys, random
 
 from pygame.locals import *
 from datetime import datetime
-from time import sleep
+from time import sleep, time
 from os import remove
 
 
@@ -20,7 +20,7 @@ height = 600
 res = (width, height)
 
 screen = pygame.display.set_mode(res)
-pygame.display.set_caption('Test Game')
+pygame.display.set_caption('Simple Platformer')
 
 clouds = pygame.sprite.Group()
 platforms = pygame.sprite.Group()
@@ -29,14 +29,16 @@ danger = pygame.sprite.Group()
 
 BG = (52, 164, 235)
 
-PlayerSpeed = 6
+PSD = 5.5
+PlayerSpeed = PSD
+
 
 FPS = 120
 
 vec = pygame.math.Vector2
 highscore = vec(0, 0)
 
-pygame.mixer.music.load('bgmusic.ogg')
+#random.seed(time(0))
 
 class Clouds(pygame.sprite.Sprite):
 	def __init__(self, pos):
@@ -53,20 +55,23 @@ class Clouds(pygame.sprite.Sprite):
 		if x < -self.image.get_width() - 10:
 			random.seed(datetime.now())
 			x = width + self.image.get_width() + 10
-			y = random.randrange(0, height//2)
+			y = random.randrange(0, height)
 
 		x-=1
 
 		self.rect.center = (x, y)
 
 class Platform(pygame.sprite.Sprite):
-	def __init__(self, Landable):
+	def __init__(self, Landable, image=None):
 		super().__init__()
 
-		if Landable:
-			self.image = pygame.image.load('platform_' + str(random.randint(0, 1)) + '.png')
+		if image == None:
+			if Landable:
+				self.image = pygame.image.load('platform_' + str(random.randint(0, 2)) + '.png')
+			else:
+				self.image = pygame.image.load('death.png')
 		else:
-			self.image = pygame.image.load('death.png')
+			self.image = pygame.image.load(image)
 
 		self.rect = self.image.get_rect()
 		self.rect.center = (random.randrange(width * 1.25, width * 2), random.randrange(height * 1//3, height))
@@ -78,7 +83,7 @@ class Player(pygame.sprite.Sprite):
 		super().__init__()
 
 		self.image = pygame.Surface((40, 40))
-		self.image.fill((0, 255, 0))
+		self.image.fill((120, 255, 120))
 
 		self.rect = self.image.get_rect()
 
@@ -92,7 +97,7 @@ class Player(pygame.sprite.Sprite):
 		pygame.mixer.Sound.set_volume(self.sound, 0.04)
 
 
-		self.jumpstate = False
+		self.jumpstate = True
 
 	def move(self):
 
@@ -142,14 +147,15 @@ class Player(pygame.sprite.Sprite):
 			self.rect.center = (x, y)
 
 
+
 	def update(self):
 
-		x, y = self.rect.topright
+		x, y = self.rect.midtop
 
 		if x > width * 2//3:
 			x = width * 2//3
 
-		self.rect.topright = (x, y)
+		self.rect.midtop = (x, y)
 
 
 		if pygame.sprite.spritecollide(self, platforms, False):
@@ -157,15 +163,22 @@ class Player(pygame.sprite.Sprite):
 			plat = plats[-1]
 			platx, platy = plat.rect.midtop
 
-			if y > platy:
-				self.rect.topright = (platx, y)
+			plat_w = plat.image.get_width()
+			plat_h = plat.image.get_height()
+
+			if y > platy and x > (platx + plat_w * 1//3) and x < (platx + plat_w * 2//3):
+				self.jumpstate = False
+				self.rect.midtop = (platx, y)
+			else:
+				self.jumpstate = True
+
 
 
 		self.relpos.x += PlayerSpeed
 
+		if self.jumpstate:
+			self.jump()
 
-#		self.move()
-		self.jump()
 		self.gravity()
 
 
@@ -180,17 +193,31 @@ class HighScoreLine(pygame.sprite.Sprite):
 		self.rect.center = (highscore.x, height/2)
 		self.x, self.y = self.rect.center
 
+class PauseScreen(pygame.sprite.Sprite):
+	def __init__(self):
+		super().__init__()
+
+		self.image = pygame.Surface((res))
+		self.image.fill((0, 0, 0))
+		self.image.set_alpha(0)
+
+		self.rect = self.image.get_rect()
+		self.rect.topleft = (0, 0)
+		self.x, self.y = self.rect.center
+
 
 def main():
+	pygame.mixer.music.load('song-' + str(random.randint(0, 3)) +'.ogg')
 
 	for i in range(40):
-		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height * 1//2)))
+		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
 		if not pygame.sprite.spritecollide(new_cloud, clouds, False):
 			clouds.add(new_cloud)
 			all_sprites.add(new_cloud)
 
 
 	global highscore
+	global PlayerSpeed
 
 
 	scoreLine = HighScoreLine()
@@ -201,7 +228,7 @@ def main():
 	all_sprites.add(p1)
 
 	# Defining ground platform
-	plat1 = Platform(True)
+	plat1 = Platform(True, 'platform_0.png')
 
 	plat1.image = pygame.transform.scale(plat1.image, (width, plat1.image.get_height()))
 	plat1.rect = plat1.image.get_rect()
@@ -238,7 +265,7 @@ def main():
 		for i in range(1):
 			random.seed(datetime.now())
 
-			choice = random.randint(0, 8)
+			choice = random.randint(0, 32)
 
 			if choice == 0:
 				new_plat = Platform(False)
@@ -256,6 +283,7 @@ def main():
 
 
 		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False) or x < 0:
+			PlayerSpeed = PSD
 			gameOver(p1, highscore)
 
 		i = 0
@@ -272,6 +300,9 @@ def main():
 			scoreLine.x = x
 		else:
 			scoreLine.x = highscore.x
+
+		if p1.relpos.x % 5000 == 0 and p1.relpos.x != 0:
+			PlayerSpeed += 0.75
 
 		scoreLine.rect.center = (scoreLine.x, height//2)
 
@@ -327,6 +358,11 @@ def startScreen():
 					y -= 20
 				if key[K_DOWN]:
 					y += 20
+				if key[K_p]:
+					pygame.mixer.quit()
+				if key[K_u]:
+					pygame.mixer.init()
+
 
 				if key[K_RETURN]:
 					if y == ey:
@@ -340,7 +376,7 @@ def startScreen():
 				if y > ey:
 					y = sy
 				if y < sy:
-					s = ey
+					y = ey
 
 
 
@@ -360,7 +396,7 @@ def startScreen():
 
 
 def gameOver(p1, highscore):
-	sleep(0.25)
+	sleep(0.5)
 
 	pygame.mixer.music.stop()
 
