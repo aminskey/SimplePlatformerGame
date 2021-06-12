@@ -48,13 +48,13 @@ BG2 = (100, 100, 255)
 pygame.mouse.set_visible(False)
 
 # Initial Player speed
-PSD = 7
+PSD = 4
 
 # player speed
 PlayerSpeed = PSD
 
-CHANCE = 128
-# 1/128 = 0.5% chance of lava block
+CHANCE = 256
+# 1/256 = 0.25% chance of lava block
 
 FPS = 110
 
@@ -107,7 +107,7 @@ class Platform(pygame.sprite.Sprite):
 
 		# General settings
 		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width * 1.25, width * 1.5), random.randrange(height * 7//12, height * 5//6))
+		self.rect.center = (random.randrange(width * 1.25, width * 1.5), random.randrange(height * 8//12, height * 5//6))
 		self.pos = vec((self.rect.center))
 
 # Seagulls class
@@ -153,10 +153,6 @@ class Player(pygame.sprite.Sprite):
 		self.acc = 1
 		self.relpos = vec(self.rect.center)
 
-		self.sound = pygame.mixer.Sound('jump.ogg')
-
-		pygame.mixer.Sound.set_volume(self.sound, 0.04)
-
 
 		self.jumpstate = True
 
@@ -173,10 +169,6 @@ class Player(pygame.sprite.Sprite):
 
 		# Event handling
 		if keys[K_SPACE] or mkeys[0]:
-
-			# Playing jump sound
-			self.sound.stop()
-			self.sound.play()
 
 			# jumping
 			y -= 20
@@ -212,7 +204,7 @@ class Player(pygame.sprite.Sprite):
 		if x > width * 2//3:
 			x = width * 2//3
 
-		# Updating Position 
+		# Updating Position
 		self.rect.midtop = (x, y)
 
 
@@ -262,6 +254,10 @@ class HighScoreLine(Player):
 def main():
 	# choosing random background song.
 	pygame.mixer.music.load('song-' + str(random.randint(0, 4)) +'.ogg')
+	sleep(0.25)
+	for i in range(8):
+		pygame.mixer.music.queue('song-' + str(random.randint(0, 4)) +'.ogg')
+
 
 	# Creating background clouds
 	for i in range(40):
@@ -298,7 +294,7 @@ def main():
 	all_sprites.add(plat1)
 
 	# loop the background music
-	pygame.mixer.music.play(-1, 0)
+	pygame.mixer.music.play(0, 0)
 
 
 	# Creating font object
@@ -360,7 +356,7 @@ def main():
 		# Put in for loop for user to increase game intensity
 		for i in range(1):
 			# randomizing chance
-			# same logic as the seagull (l. 352) but with lava blocks
+			# same logic as the seagull (l. 399) but with lava blocks
 			# but not dependent on distance
 			random.seed(datetime.now())
 
@@ -396,14 +392,14 @@ def main():
 			if px <= 0 or i > 10:
 				plat.kill()
 
-		# Seagull will most likely spawn after player score is 300. May not happen at 300 due to possibility
-		if p1.relpos.x > 30000 == 0:
+		# Seagull will most likely spawn after player score is 30. May not happen at 30 due to chance of spawn
+		if p1.relpos.x > 10000:
 			# Chance of a seagull spawning
 			choice = random.randint(0, CHANCE)
 
 			# If true then spawn
 			if choice == 0:
-				for i in range(random.randrange(0, 10)):
+				for i in range(random.randrange(0, 3)):
 					new_seagull = Seagull()
 
 					if not pygame.sprite.spritecollide(new_seagull, seagulls, False):
@@ -422,9 +418,9 @@ def main():
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
 
-		if p1.relpos.x % 10000 == 0 and p1.relpos.x != 0:
+		if p1.relpos.x % 2000 == 0 and p1.relpos.x != 0:
 			PlayerSpeed += 1
-			CHANCE //= 4
+			CHANCE //=1.05
 
 		# Updating scoreline
 		scoreLine.rect.center = (scoreLine.x, height//2)
@@ -451,15 +447,18 @@ def main():
 		# Fixed Frame rate 120 recommended unless old computer
 		clock.tick(FPS)
 
+	pygame.mixer.music.unload()
+
 def startScreen():
+
+	pygame.mixer.music.load('startup.ogg')
 
 	header = pygame.font.Font('pixelart.ttf', 50)
 	sub = pygame.font.Font('pixelart.ttf', 25)
 
-	title = header.render(name, BG, (255, 255, 255))
-
-	start = sub.render('Start', BG, (255, 255, 255))
-	exit = sub.render('Quit', BG, (255, 255, 255))
+	title = header.render(name, BG, (230, 230, 230))
+	start = sub.render('Start', BG, (230, 230, 230))
+	exit = sub.render('Quit', BG, (230, 230, 230))
 
 	cursor = sub.render('->', BG, (100, 255, 100))
 
@@ -482,6 +481,15 @@ def startScreen():
 	sx, sy = startRect.center
 	ex, ey = exitRect.center
 
+	cloudsGroup = pygame.sprite.Group()
+
+	for i in range(40):
+		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
+
+		if not pygame.sprite.spritecollide(new_cloud, cloudsGroup, False):
+			cloudsGroup.add(new_cloud)
+
+	pygame.mixer.music.play()
 	while True:
 
 		for event in pygame.event.get():
@@ -503,12 +511,13 @@ def startScreen():
 
 				if key[K_RETURN]:
 					if y == ey:
-						pygame.mixer.music.unload()
+						pygame.mixer.music.stop()
 						pygame.quit()
 						sys.exit()
 					elif y == sy:
+						pygame.mixer.music.stop()
 						main()
-					break
+						break
 
 				if y > ey:
 					y = sy
@@ -524,16 +533,24 @@ def startScreen():
 
 		screen.fill(BG)
 
+		cloudsGroup.draw(screen)
+		cloudsGroup.update()
+
 		screen.blit(title, titleRect)
 		screen.blit(start, startRect)
 		screen.blit(exit, exitRect)
 		screen.blit(cursor, cursorRect)
 
+
+
 		pygame.display.update()
+		clock.tick(FPS)
 
 
 def gameOver(p1, highscore):
 
+
+	pygame.mixer.music.load('gameOver.ogg')
 	if p1.relpos.x >= highscore.x:
 		highscore.x = p1.relpos.x
 
@@ -559,8 +576,10 @@ def gameOver(p1, highscore):
 	screen.blit(score, scoreRect)
 	screen.blit(text2, text2Rect)
 
+	pygame.mixer.music.play(0, 0)
 	pygame.display.flip()
 	sleep(0.75)
+
 
 	while True:
 		for event in pygame.event.get():
