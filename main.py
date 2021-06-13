@@ -39,6 +39,7 @@ all_sprites = pygame.sprite.Group()
 danger = pygame.sprite.Group()
 players = pygame.sprite.Group()
 seagulls = pygame.sprite.Group()
+planes = pygame.sprite.Group()
 
 # text and screen background
 BG = (52, 164, 235)
@@ -48,7 +49,7 @@ BG2 = (100, 100, 255)
 pygame.mouse.set_visible(False)
 
 # Initial Player speed
-PSD = 4
+PSD = 3
 
 # player speed
 PlayerSpeed = PSD
@@ -135,6 +136,32 @@ class Seagull(pygame.sprite.Sprite):
 			seagulls.remove(self)
 
 			self.kill()
+
+# Planes Class
+class Plane(pygame.sprite.Sprite):
+	# Initial settings
+	def __init__(self, alpha):
+		super().__init__()
+
+		self.image = pygame.image.load('planes-' + str(random.randrange(0, 1)) + '.png')
+
+		self.image.set_alpha(alpha)
+
+		self.rect = self.image.get_rect()
+		self.rect.center = (random.randrange(width * 1.5, width * 2.5), random.randrange(0, height * 2//3))
+
+		self.x, self.y = self.rect.center
+
+	def update(self, speed):
+		self.x -= speed
+
+		if self.x < 0 - self.image.get_width():
+			random.seed(datetime.now())
+			self.x = width + self.image.get_width()
+			self.y = random.randrange(0, height * 2//3)
+
+
+		self.rect.center = (self.x, self.y)
 
 
 # Player class
@@ -258,14 +285,28 @@ def main():
 	for i in range(8):
 		pygame.mixer.music.queue('song-' + str(random.randint(0, 4)) +'.ogg')
 
+	# planes in the background
+	for i in range(2):
+		new_plane = Plane(random.randrange(200, 255))
+
+		if not pygame.sprite.spritecollide(new_plane, planes, False):
+			planes.add(new_plane)
+			all_sprites.add(new_plane)
 
 	# Creating background clouds
-	for i in range(40):
+	for i in range(20):
 		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
 
 		if not pygame.sprite.spritecollide(new_cloud, clouds, False):
 			clouds.add(new_cloud)
 			all_sprites.add(new_cloud)
+
+	for i in range(2):
+		new_plane = Plane(random.randrange(200, 255))
+
+		if not pygame.sprite.spritecollide(new_plane, planes, False):
+			planes.add(new_plane)
+			all_sprites.add(new_plane)
 
 	# Importing global variables
 	global highscore
@@ -296,6 +337,9 @@ def main():
 	# loop the background music
 	pygame.mixer.music.play(0, 0)
 
+
+	# Creating Fixed Plane speed
+	PlaneSpeed = random.randrange(1, 3)
 
 	# Creating font object
 	sub = pygame.font.Font('pixelart.ttf', 25)
@@ -407,6 +451,7 @@ def main():
 						all_sprites.add(new_seagull)
 						danger.add(new_seagull)
 
+
 		# Checking if player's relative position greater then highscore position
 		# If yes then update
 		if p1.relpos.x >= highscore.x:
@@ -427,6 +472,7 @@ def main():
 
 
 		# Updating sprite groups
+		planes.update(PlaneSpeed)
 		clouds.update()
 		seagulls.update()
 		p1.update()
