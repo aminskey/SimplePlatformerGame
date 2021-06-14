@@ -41,6 +41,7 @@ players = pygame.sprite.Group()
 seagulls = pygame.sprite.Group()
 planes = pygame.sprite.Group()
 
+
 # text and screen background
 BG = (52, 164, 235)
 BG2 = (100, 100, 255)
@@ -49,7 +50,7 @@ BG2 = (100, 100, 255)
 pygame.mouse.set_visible(False)
 
 # Initial Player speed
-PSD = 3
+PSD = 4
 
 # player speed
 PlayerSpeed = PSD
@@ -108,7 +109,7 @@ class Platform(pygame.sprite.Sprite):
 
 		# General settings
 		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width * 1.25, width * 1.5), random.randrange(height * 8//12, height * 5//6))
+		self.rect.center = (random.randrange(width * 1.25, width * 3), random.randrange(height * 8//12, height * 5//6))
 		self.pos = vec((self.rect.center))
 
 # Seagulls class
@@ -280,10 +281,10 @@ class HighScoreLine(Player):
 
 def main():
 	# choosing random background song.
-	pygame.mixer.music.load('song-' + str(random.randint(0, 4)) +'.ogg')
+	pygame.mixer.music.load('song-' + str(random.randint(0, 5)) +'.ogg')
 	sleep(0.25)
 	for i in range(8):
-		pygame.mixer.music.queue('song-' + str(random.randint(0, 4)) +'.ogg')
+		pygame.mixer.music.queue('song-' + str(random.randint(0, 5)) +'.ogg')
 
 	# planes in the background
 	for i in range(2):
@@ -339,12 +340,24 @@ def main():
 
 
 	# Creating Fixed Plane speed
-	PlaneSpeed = random.randrange(1, 3)
+	PlaneSpeed = random.randrange(2, 4)
 
 	# Creating font object
 	sub = pygame.font.Font('pixelart.ttf', 25)
 
 	while True:
+
+		# PlayerSpeed Text
+		ps1 = sub.render('Player Speed:', BG2, (55, 55, 255))
+		ps2 = sub.render(str(PlayerSpeed), BG2, (55, 55, 255))
+
+		# Rectangle
+		ps1Rect = ps1.get_rect()
+		ps2Rect = ps2.get_rect()
+
+		# Position
+		ps1Rect.center = (width * 6//16, ps1.get_height()*3)
+		ps2Rect.center = (width * 11//16, ps2.get_height()*3)
 
 		# HUD highscore text
 		hs1 = sub.render('Current Highscore: ', BG2, (55,55,255))
@@ -437,7 +450,7 @@ def main():
 				plat.kill()
 
 		# Seagull will most likely spawn after player score is 30. May not happen at 30 due to chance of spawn
-		if p1.relpos.x > 10000:
+		if p1.relpos.x > 15000:
 			# Chance of a seagull spawning
 			choice = random.randint(0, CHANCE)
 
@@ -450,7 +463,6 @@ def main():
 						seagulls.add(new_seagull)
 						all_sprites.add(new_seagull)
 						danger.add(new_seagull)
-
 
 		# Checking if player's relative position greater then highscore position
 		# If yes then update
@@ -465,7 +477,10 @@ def main():
 
 		if p1.relpos.x % 2000 == 0 and p1.relpos.x != 0:
 			PlayerSpeed += 1
+
+		# 1/chancenumber divided by 105/100
 			CHANCE //=1.05
+
 
 		# Updating scoreline
 		scoreLine.rect.center = (scoreLine.x, height//2)
@@ -486,6 +501,9 @@ def main():
 
 		screen.blit(score1, score1Rect)
 		screen.blit(score2, score2Rect)
+
+		screen.blit(ps1, ps1Rect)
+		screen.blit(ps2, ps2Rect)
 
 		# Refreshing screen
 		pygame.display.update()
@@ -527,15 +545,24 @@ def startScreen():
 	sx, sy = startRect.center
 	ex, ey = exitRect.center
 
-	cloudsGroup = pygame.sprite.Group()
+	cloudsGroup1 = pygame.sprite.Group()
+	cloudsGroup2 = pygame.sprite.Group()
 
-	for i in range(40):
+	for i in range(30):
 		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
 
-		if not pygame.sprite.spritecollide(new_cloud, cloudsGroup, False):
-			cloudsGroup.add(new_cloud)
+		if not pygame.sprite.spritecollide(new_cloud, cloudsGroup1, False):
+			cloudsGroup1.add(new_cloud)
 
-	pygame.mixer.music.play()
+	sleep(0.125)
+
+	for i in range(10):
+		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
+
+		if not pygame.sprite.spritecollide(new_cloud, cloudsGroup2, False):
+			cloudsGroup2.add(new_cloud)
+
+	pygame.mixer.music.play(-1, 0)
 	while True:
 
 		for event in pygame.event.get():
@@ -579,14 +606,16 @@ def startScreen():
 
 		screen.fill(BG)
 
-		cloudsGroup.draw(screen)
-		cloudsGroup.update()
+		cloudsGroup1.draw(screen)
+		cloudsGroup1.update()
 
 		screen.blit(title, titleRect)
 		screen.blit(start, startRect)
 		screen.blit(exit, exitRect)
 		screen.blit(cursor, cursorRect)
 
+		cloudsGroup2.draw(screen)
+		cloudsGroup2.update()
 
 
 		pygame.display.update()
