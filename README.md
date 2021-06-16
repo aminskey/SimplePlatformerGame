@@ -24,9 +24,9 @@ I Learned about Sprites, Classes and how to use the mouse.
 
 ### How to install Pygame
 	pip install pygame
-	#
-	# or
-	#
+
+	or
+
 	sudo ... install python3-pygame
 
 ### Great Now You're ready to go
