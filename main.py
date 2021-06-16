@@ -70,7 +70,7 @@ class Clouds(pygame.sprite.Sprite):
 	def __init__(self, pos):
 		super().__init__()
 
-		self.image = pygame.image.load('cloud.png')
+		self.image = pygame.image.load('backgroundObjects/cloud.png')
 		self.rect = self.image.get_rect()
 
 		self.rect.center = pos
@@ -101,9 +101,9 @@ class Platform(pygame.sprite.Sprite):
 		# if not landable then use lava block image.
 		if image == None:
 			if Landable:
-				self.image = pygame.image.load('platform_' + str(random.randint(0, 2)) + '.png')
+				self.image = pygame.image.load('platforms/platform_' + str(random.randint(0, 2)) + '.png')
 			else:
-				self.image = pygame.image.load('death.png')
+				self.image = pygame.image.load('badObjects/lavablock.png')
 		else:
 			self.image = pygame.image.load(image)
 
@@ -118,7 +118,7 @@ class Seagull(pygame.sprite.Sprite):
 	def __init__(self):
 		super().__init__()
 
-		self.image = pygame.image.load('seagull.png')
+		self.image = pygame.image.load('badObjects/seagull.png')
 
 		self.rect = self.image.get_rect()
 		self.rect.center = (random.randrange(width, width * 2), random.randrange(height * 1//6, height * 5//24))
@@ -144,7 +144,7 @@ class Plane(pygame.sprite.Sprite):
 	def __init__(self, alpha):
 		super().__init__()
 
-		self.image = pygame.image.load('planes-' + str(random.randrange(0, 1)) + '.png')
+		self.image = pygame.image.load('backgroundObjects/planes-' + str(random.randrange(0, 1)) + '.png')
 
 		self.image.set_alpha(alpha)
 
@@ -281,10 +281,10 @@ class HighScoreLine(Player):
 
 def main():
 	# choosing random background song.
-	pygame.mixer.music.load('song-' + str(random.randint(0, 5)) +'.ogg')
+	pygame.mixer.music.load('songs/song-' + str(random.randint(0, 5)) +'.ogg')
 	sleep(0.25)
 	for i in range(8):
-		pygame.mixer.music.queue('song-' + str(random.randint(0, 5)) +'.ogg')
+		pygame.mixer.music.queue('songs/song-' + str(random.randint(0, 5)) +'.ogg')
 
 	# planes in the background
 	for i in range(2):
@@ -324,7 +324,7 @@ def main():
 	players.add(p1)
 
 	# Defining ground platform
-	plat1 = Platform(True, 'platform_0.png')
+	plat1 = Platform(True, 'platforms/platform_0.png')
 
 	# Customizing platform
 	plat1.image = pygame.transform.scale(plat1.image, (width, plat1.image.get_height()))
@@ -343,7 +343,7 @@ def main():
 	PlaneSpeed = random.randrange(2, 4)
 
 	# Creating font object
-	sub = pygame.font.Font('pixelart.ttf', 25)
+	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
 
 	while True:
 
@@ -515,10 +515,10 @@ def main():
 
 def startScreen():
 
-	pygame.mixer.music.load('startup.ogg')
+	pygame.mixer.music.load('songs/startup.ogg')
 
-	header = pygame.font.Font('pixelart.ttf', 50)
-	sub = pygame.font.Font('pixelart.ttf', 25)
+	header = pygame.font.Font('fonts/pixelart.ttf', 50)
+	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
 
 	title = header.render(name, BG, (230, 230, 230))
 	start = sub.render('Start', BG, (230, 230, 230))
@@ -625,15 +625,15 @@ def startScreen():
 def gameOver(p1, highscore):
 
 
-	pygame.mixer.music.load('gameOver.ogg')
+	pygame.mixer.music.load('sounds/gameOver.ogg')
 	if p1.relpos.x >= highscore.x:
 		highscore.x = p1.relpos.x
 
 
 	pygame.mixer.music.stop()
 
-	header = pygame.font.Font('pixelart.ttf', 40)
-	sub = pygame.font.Font('pixelart.ttf', 20)
+	header = pygame.font.Font('fonts/pixelart.ttf', 40)
+	sub = pygame.font.Font('fonts/pixelart.ttf', 20)
 
 	text = header.render('Game Over: ' + str(p1.relpos.x//100), BG, (255, 255, 255))
 	text2 = sub.render('Press anything to continue', BG, (255, 255, 255))
