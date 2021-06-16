@@ -24,13 +24,16 @@ I Learned about Sprites, Classes and how to use the mouse.
 
 ### How to install Pygame
 	pip install pygame
-or  
+	#
+	# or
+	#
 	sudo ... install python3-pygame
 
 ### Great Now You're ready to go
 
 # Tips on Gameplay
-Here are some tips that you could use to survive for longer
+Here are some tips that you could use to survive for longer  
+
 	1. The longer you hold the spacebar the higher you jump, which also means that if you want to skip a few blocks you can just slightly tap on your keyboard
 	2. Watch out for the lava blocks and seagulls
 	3. Don't get stuck in platforms, always land on top
