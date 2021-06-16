@@ -17,7 +17,7 @@ I Learned about Sprites, Classes and how to use the mouse.
 
 ## Getting Started
 ### What you'll need
-	1. GUI
+	1. SDL 2.0.14
 	2. Python 3.9
 	3. Pygame 2.0.1	
 	4. pip
