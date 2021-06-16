@@ -109,7 +109,7 @@ class Platform(pygame.sprite.Sprite):
 
 		# General settings
 		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width * 1.25, width * 3), random.randrange(height * 8//12, height * 5//6))
+		self.rect.center = (random.randrange(width * 1.25, width * 2.5), random.randrange(height * 8//12, height * 5//6))
 		self.pos = vec((self.rect.center))
 
 # Seagulls class
