@@ -515,7 +515,7 @@ def main():
 
 def startScreen():
 
-	pygame.mixer.music.load('songs/startup.ogg')
+	pygame.mixer.music.load('songs/startup'+str(random.randint(1,2))+'.ogg')
 
 	header = pygame.font.Font('fonts/pixelart.ttf', 50)
 	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
