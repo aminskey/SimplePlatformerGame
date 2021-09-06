@@ -50,7 +50,7 @@ BG2 = (100, 100, 255)
 pygame.mouse.set_visible(False)
 
 # Initial Player speed
-PSD = 4
+PSD = 6
 
 # player speed
 PlayerSpeed = PSD
@@ -58,7 +58,7 @@ PlayerSpeed = PSD
 CHANCE = 256
 # 1/256 = 0.25% chance of lava block
 
-FPS = 110
+FPS = 100
 
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
@@ -103,7 +103,7 @@ class Platform(pygame.sprite.Sprite):
 			if Landable:
 				self.image = pygame.image.load('platforms/platform_' + str(random.randint(0, 2)) + '.png')
 			else:
-				self.image = pygame.image.load('badObjects/lavablock.png')
+				self.image = pygame.image.load('badObjects/badplat' + str(random.randint(0,1))+'.png')
 		else:
 			self.image = pygame.image.load(image)
 
@@ -178,7 +178,7 @@ class Player(pygame.sprite.Sprite):
 
 		self.rect.center = (width//2, 0)
 
-		self.acc = 1
+		self.acc = 2
 		self.relpos = vec(self.rect.center)
 
 
@@ -513,6 +513,88 @@ def main():
 
 	pygame.mixer.music.unload()
 
+def helpScreen():
+	pygame.mixer.music.load('songs/help.ogg')
+
+	cloudsgroup1 = pygame.sprite.Group()
+	cloudsgroup2 = pygame.sprite.Group()
+
+	for i in range(5):
+		new_cloud = Clouds((random.randint(0, width), random.randint(0, height)))
+
+		if not pygame.sprite.spritecollide(new_cloud, cloudsgroup1, False):
+			cloudsgroup1.add(new_cloud)
+	sleep(0.75)
+
+	for i in range(15):
+		new_cloud = Clouds((random.randint(0, width), random.randint(0, height)))
+
+		if not pygame.sprite.spritecollide(new_cloud, cloudsgroup2, False):
+			cloudsgroup2.add(new_cloud)
+
+	header = pygame.font.Font('fonts/pixelart.ttf', 50)
+	sub = pygame.font.Font('fonts/pixelart.ttf', 20)
+
+	title = header.render('Instructions and Details', BG, (230, 230, 230))
+	l1 = sub.render("Your goal is too avoid the obstacles in your path by skipping them.", BG, (230, 230, 230))
+	l2 = sub.render("Spacebar to jump.", BG, (230, 230, 230))
+	l3 = sub.render("You can land on the clouds but not the ones with thunder.", BG, (230, 230, 230))
+	l4 = sub.render("During your journey you will encounter lavablocks.", BG, (230, 230, 230))
+	l5 = sub.render("You can't land on those", BG, (230, 230, 230))
+	l6 = sub.render("You will also find seagulls.", BG, (230, 230, 230))
+	l7 = sub.render("Just don't hit any of them, they're very angry", BG, (230, 230, 230))
+
+	titleRect = title.get_rect()
+
+	l1Rect = l1.get_rect()
+	l2Rect = l2.get_rect()
+	l3Rect = l3.get_rect()
+
+	l1Rect = (width * 1//64, height * 7//32)
+	l2Rect = (width * 1//64, height * 9//32)
+	l3Rect = (width * 1//64, height * 11//32)
+	l4Rect = (width * 1//64, height * 13//32)
+	l5Rect = (width * 1//64, height * 15//32)
+	l6Rect = (width * 1//64, height * 17//32)
+	l7Rect = (width * 1//64, height * 19//32)
+
+	titleRect = (width * 1//32, height* 1//16)
+
+	pygame.mixer.music.play(0, 0)
+
+	while True:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				sys.exit(0)
+			if event.type == pygame.KEYDOWN:
+				pygame.mixer.music.stop()
+				startScreen()
+
+
+		screen.fill(BG)
+
+		cloudsgroup1.draw(screen)
+
+
+		screen.blit(title, titleRect)
+
+		screen.blit(l1, l1Rect)
+		screen.blit(l2, l2Rect)
+		screen.blit(l3, l3Rect)
+		screen.blit(l4, l4Rect)
+		screen.blit(l5, l5Rect)
+		screen.blit(l6, l6Rect)
+		screen.blit(l7, l7Rect)
+
+		cloudsgroup2.draw(screen)
+
+		cloudsgroup1.update()
+		cloudsgroup2.update()
+
+		clock.tick(FPS-10)
+		pygame.display.update()
+
 def startScreen():
 
 	pygame.mixer.music.load('songs/startup'+str(random.randint(1,2))+'.ogg')
@@ -522,6 +604,7 @@ def startScreen():
 
 	title = header.render(name, BG, (230, 230, 230))
 	start = sub.render('Start', BG, (230, 230, 230))
+	help = sub.render('Help', BG, (230, 230, 230))
 	exit = sub.render('Quit', BG, (230, 230, 230))
 
 	cursor = sub.render('->', BG, (100, 255, 100))
@@ -529,6 +612,7 @@ def startScreen():
 	titleRect = title.get_rect()
 
 	startRect = start.get_rect()
+	helpRect = help.get_rect()
 	exitRect = exit.get_rect()
 
 	cursorRect = cursor.get_rect()
@@ -536,13 +620,15 @@ def startScreen():
 	titleRect.center = (width/2, height * 1//3)
 
 	startRect.center = (width/2, height * 1//2 - 10)
-	exitRect.center = (width/2, height * 1//2 + 10)
+	helpRect.center = (width/2, height * 1//2 + 10)
+	exitRect.center = (width/2, height * 1//2 + 30)
 
 	cursorRect.center = (width//2 - 50, height * 1//2 - 10)
 
 	x, y = cursorRect.center
 
 	sx, sy = startRect.center
+	hx, hy = helpRect.center
 	ex, ey = exitRect.center
 
 	cloudsGroup1 = pygame.sprite.Group()
@@ -587,6 +673,10 @@ def startScreen():
 						pygame.mixer.music.stop()
 						pygame.quit()
 						sys.exit()
+					elif y == hy:
+						pygame.mixer.music.stop()
+						helpScreen()
+						startScreen()
 					elif y == sy:
 						pygame.mixer.music.stop()
 						main()
@@ -612,6 +702,7 @@ def startScreen():
 		screen.blit(title, titleRect)
 		screen.blit(start, startRect)
 		screen.blit(exit, exitRect)
+		screen.blit(help, helpRect)
 		screen.blit(cursor, cursorRect)
 
 		cloudsGroup2.draw(screen)
@@ -653,7 +744,7 @@ def gameOver(p1, highscore):
 
 	pygame.mixer.music.play(0, 0)
 	pygame.display.flip()
-	sleep(0.75)
+	sleep(3)
 
 
 	while True:
