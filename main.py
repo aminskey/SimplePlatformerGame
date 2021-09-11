@@ -120,7 +120,7 @@ class Seagull(pygame.sprite.Sprite):
 		self.image = pygame.image.load('badObjects/seagull.png')
 
 		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width, width * 2), random.randrange(height, height * 5//24))
+		self.rect.center = (random.randint(width, width * 2), random.randint(0, height * 5//24))
 
 		self.x, self.y = self.rect.center
 
