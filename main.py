@@ -39,7 +39,6 @@ all_sprites = pygame.sprite.Group()
 danger = pygame.sprite.Group()
 players = pygame.sprite.Group()
 seagulls = pygame.sprite.Group()
-planes = pygame.sprite.Group()
 
 
 # text and screen background
@@ -50,7 +49,7 @@ BG2 = (100, 100, 255)
 pygame.mouse.set_visible(False)
 
 # Initial Player speed
-PSD = 6
+PSD = 3
 
 # player speed
 PlayerSpeed = PSD
@@ -101,9 +100,9 @@ class Platform(pygame.sprite.Sprite):
 		# if not landable then use lava block image.
 		if image == None:
 			if Landable:
-				self.image = pygame.image.load('platforms/platform_' + str(random.randint(0, 2)) + '.png')
+				self.image = pygame.image.load('platforms/platform_' + str(random.randint(0, 5)) + '.png')
 			else:
-				self.image = pygame.image.load('badObjects/badplat' + str(random.randint(0,1))+'.png')
+				self.image = pygame.image.load('badObjects/badplat' + str(random.randint(0,2))+'.png')
 		else:
 			self.image = pygame.image.load(image)
 
@@ -121,7 +120,7 @@ class Seagull(pygame.sprite.Sprite):
 		self.image = pygame.image.load('badObjects/seagull.png')
 
 		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width, width * 2), random.randrange(height * 1//6, height * 5//24))
+		self.rect.center = (random.randrange(width, width * 2), random.randrange(height, height * 5//24))
 
 		self.x, self.y = self.rect.center
 
@@ -138,41 +137,14 @@ class Seagull(pygame.sprite.Sprite):
 
 			self.kill()
 
-# Planes Class
-class Plane(pygame.sprite.Sprite):
-	# Initial settings
-	def __init__(self, alpha):
-		super().__init__()
-
-		self.image = pygame.image.load('backgroundObjects/planes-' + str(random.randrange(0, 1)) + '.png')
-
-		self.image.set_alpha(alpha)
-
-		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width * 1.5, width * 2.5), random.randrange(0, height * 2//3))
-
-		self.x, self.y = self.rect.center
-
-	def update(self, speed):
-		self.x -= speed
-
-		if self.x < 0 - self.image.get_width():
-			random.seed(datetime.now())
-			self.x = width + self.image.get_width()
-			self.y = random.randrange(0, height * 2//3)
-
-
-		self.rect.center = (self.x, self.y)
-
-
 # Player class
 class Player(pygame.sprite.Sprite):
 	# initial settings
 	def __init__(self):
 		super().__init__()
 
-		self.image = pygame.Surface((40, 40))
-		self.image.fill((120, 255, 120))
+		self.image = pygame.image.load("player.png")
+		self.image = pygame.transform.scale(self.image, (40, 40))
 
 		self.rect = self.image.get_rect()
 
@@ -279,20 +251,20 @@ class HighScoreLine(Player):
 		self.rect.center = (highscore.x, height/2)
 		self.x, self.y = self.rect.center
 
+
 def main():
+	bg = pygame.image.load("backgrounds/bg" + str(random.randint(1,4)) + ".png")
+
+	bg = pygame.transform.scale(bg, res)
+	bgRect = bg.get_rect()
+
+	bgRect = (0, 0)
+
 	# choosing random background song.
 	pygame.mixer.music.load('songs/song-' + str(random.randint(0, 5)) +'.ogg')
 	sleep(0.25)
 	for i in range(8):
 		pygame.mixer.music.queue('songs/song-' + str(random.randint(0, 5)) +'.ogg')
-
-	# planes in the background
-	for i in range(2):
-		new_plane = Plane(random.randrange(200, 255))
-
-		if not pygame.sprite.spritecollide(new_plane, planes, False):
-			planes.add(new_plane)
-			all_sprites.add(new_plane)
 
 	# Creating background clouds
 	for i in range(20):
@@ -301,13 +273,6 @@ def main():
 		if not pygame.sprite.spritecollide(new_cloud, clouds, False):
 			clouds.add(new_cloud)
 			all_sprites.add(new_cloud)
-
-	for i in range(2):
-		new_plane = Plane(random.randrange(200, 255))
-
-		if not pygame.sprite.spritecollide(new_plane, planes, False):
-			planes.add(new_plane)
-			all_sprites.add(new_plane)
 
 	# Importing global variables
 	global highscore
@@ -331,16 +296,21 @@ def main():
 	plat1.rect = plat1.image.get_rect()
 	plat1.rect.topleft = (0, height * 5//6 + 3)
 
+
+	plat2 = Platform(True, 'platforms/platform_2.png')
+
+	plat2.rect.center = (width * 1.25, height * 4//6)
+
 	# Add initial platform to groups
 	platforms.add(plat1)
 	all_sprites.add(plat1)
 
+	platforms.add(plat2)
+	all_sprites.add(plat2)
+
 	# loop the background music
 	pygame.mixer.music.play(0, 0)
 
-
-	# Creating Fixed Plane speed
-	PlaneSpeed = random.randrange(2, 4)
 
 	# Creating font object
 	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
@@ -392,7 +362,6 @@ def main():
 				sys.exit()
 
 
-		screen.fill(BG)
 
 		x, y = p1.rect.center
 
@@ -449,8 +418,8 @@ def main():
 			if px <= 0 or i > 10:
 				plat.kill()
 
-		# Seagull will most likely spawn after player score is 30. May not happen at 30 due to chance of spawn
-		if p1.relpos.x > 15000:
+		# Seagull spawning after player distance 500
+		if p1.relpos.x > 50000:
 			# Chance of a seagull spawning
 			choice = random.randint(0, CHANCE)
 
@@ -487,10 +456,11 @@ def main():
 
 
 		# Updating sprite groups
-		planes.update(PlaneSpeed)
 		clouds.update()
 		seagulls.update()
 		p1.update()
+
+		screen.blit(bg, bgRect)
 
 		# Drawing all sprites to screen
 		all_sprites.draw(screen)
@@ -519,14 +489,14 @@ def helpScreen():
 	cloudsgroup1 = pygame.sprite.Group()
 	cloudsgroup2 = pygame.sprite.Group()
 
-	for i in range(5):
+	for i in range(15):
 		new_cloud = Clouds((random.randint(0, width), random.randint(0, height)))
 
 		if not pygame.sprite.spritecollide(new_cloud, cloudsgroup1, False):
 			cloudsgroup1.add(new_cloud)
 	sleep(0.75)
 
-	for i in range(15):
+	for i in range(5):
 		new_cloud = Clouds((random.randint(0, width), random.randint(0, height)))
 
 		if not pygame.sprite.spritecollide(new_cloud, cloudsgroup2, False):
@@ -560,6 +530,14 @@ def helpScreen():
 
 	titleRect = (width * 1//32, height* 1//16)
 
+	bg = pygame.image.load("backgrounds/bg1.png")
+	bg = pygame.transform.scale(bg, res)
+
+	bgRect = bg.get_rect()
+
+	bgRect = (0, 0)
+
+
 	pygame.mixer.music.play(0, 0)
 
 	while True:
@@ -572,7 +550,7 @@ def helpScreen():
 				startScreen()
 
 
-		screen.fill(BG)
+		screen.blit(bg, bgRect)
 
 		cloudsgroup1.draw(screen)
 
@@ -668,7 +646,7 @@ def startScreen():
 					pygame.mixer.init()
 
 
-				if key[K_RETURN]:
+				if key[K_SPACE] or key[K_RETURN]:
 					if y == ey:
 						pygame.mixer.music.stop()
 						pygame.quit()
@@ -737,6 +715,8 @@ def gameOver(p1, highscore):
 	textRect.midbottom = (width // 2, height//3)
 	text2Rect.midbottom = (width // 2, height * 3//6)
 	scoreRect.midbottom = (width // 2, height * 3//12)
+
+	screen.fill(BG)
 
 	screen.blit(text, textRect)
 	screen.blit(score, scoreRect)
