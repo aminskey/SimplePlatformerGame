@@ -57,7 +57,7 @@ PlayerSpeed = PSD
 CHANCE = 256
 # 1/256 = 0.25% chance of lava block
 
-FPS = 100
+FPS = 110
 
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
@@ -253,7 +253,7 @@ class HighScoreLine(Player):
 
 
 def main():
-	bg = pygame.image.load("backgrounds/bg" + str(random.randint(1,4)) + ".png")
+	bg = pygame.image.load("backgrounds/bg" + str(random.randint(1,6)) + ".png")
 
 	bg = pygame.transform.scale(bg, res)
 	bgRect = bg.get_rect()
@@ -289,7 +289,7 @@ def main():
 	players.add(p1)
 
 	# Defining ground platform
-	plat1 = Platform(True, 'platforms/platform_0.png')
+	plat1 = Platform(True, 'platforms/platform_5.png')
 
 	# Customizing platform
 	plat1.image = pygame.transform.scale(plat1.image, (width, plat1.image.get_height()))
@@ -297,7 +297,7 @@ def main():
 	plat1.rect.topleft = (0, height * 5//6 + 3)
 
 
-	plat2 = Platform(True, 'platforms/platform_2.png')
+	plat2 = Platform(True, 'platforms/platform_0.png')
 
 	plat2.rect.center = (width * 1.25, height * 4//6)
 
@@ -321,6 +321,7 @@ def main():
 		ps1 = sub.render('Player Speed:', BG2, (55, 55, 255))
 		ps2 = sub.render(str(PlayerSpeed), BG2, (55, 55, 255))
 
+
 		# Rectangle
 		ps1Rect = ps1.get_rect()
 		ps2Rect = ps2.get_rect()
@@ -340,8 +341,6 @@ def main():
 		# Positioning text
 		hs1Rect.center = (width * 6//16, hs1.get_height())
 		hs2Rect.center = (width * 11//16, hs2.get_height())
-
-
 
 		# HUD Player text
 		score1 = sub.render('Player Score', BG2, (55,55,255))
@@ -478,29 +477,13 @@ def main():
 		# Refreshing screen
 		pygame.display.update()
 
-		# Fixed Frame rate 120 recommended unless old computer
+		# Fixed Frame rate 110 recommended unless old computer
 		clock.tick(FPS)
 
 	pygame.mixer.music.unload()
 
 def helpScreen():
 	pygame.mixer.music.load('songs/help.ogg')
-
-	cloudsgroup1 = pygame.sprite.Group()
-	cloudsgroup2 = pygame.sprite.Group()
-
-	for i in range(15):
-		new_cloud = Clouds((random.randint(0, width), random.randint(0, height)))
-
-		if not pygame.sprite.spritecollide(new_cloud, cloudsgroup1, False):
-			cloudsgroup1.add(new_cloud)
-	sleep(0.75)
-
-	for i in range(5):
-		new_cloud = Clouds((random.randint(0, width), random.randint(0, height)))
-
-		if not pygame.sprite.spritecollide(new_cloud, cloudsgroup2, False):
-			cloudsgroup2.add(new_cloud)
 
 	header = pygame.font.Font('fonts/pixelart.ttf', 50)
 	sub = pygame.font.Font('fonts/pixelart.ttf', 20)
@@ -552,9 +535,6 @@ def helpScreen():
 
 		screen.blit(bg, bgRect)
 
-		cloudsgroup1.draw(screen)
-
-
 		screen.blit(title, titleRect)
 
 		screen.blit(l1, l1Rect)
@@ -564,11 +544,6 @@ def helpScreen():
 		screen.blit(l5, l5Rect)
 		screen.blit(l6, l6Rect)
 		screen.blit(l7, l7Rect)
-
-		cloudsgroup2.draw(screen)
-
-		cloudsgroup1.update()
-		cloudsgroup2.update()
 
 		clock.tick(FPS-10)
 		pygame.display.update()
