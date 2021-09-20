@@ -19,11 +19,13 @@ pygame.mixer.init()
 clock = pygame.time.Clock()
 
 # Resolution
-width = 800
-height = 600
+width = 900
+height = 700
 
 # resolution tuple
 res = (width, height)
+
+firstEntry = True
 
 # Game name
 name = 'Sky Dash'
@@ -108,7 +110,7 @@ class Platform(pygame.sprite.Sprite):
 
 		# General settings
 		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width * 1.25, width * 2.5), random.randrange(height * 8//12, height * 5//6))
+		self.rect.center = (random.randrange(width * 1.25, width * 2), random.randrange(height * 8//12, height * 5//6))
 		self.pos = vec((self.rect.center))
 
 # Seagulls class
@@ -150,9 +152,8 @@ class Player(pygame.sprite.Sprite):
 
 		self.rect.center = (width//2, 0)
 
-		self.acc = 2
+		self.acc = 0
 		self.relpos = vec(self.rect.center)
-
 
 		self.jumpstate = True
 
@@ -185,7 +186,7 @@ class Player(pygame.sprite.Sprite):
 		# If not then continue falling and updating position
 		if not pygame.sprite.spritecollide(self, platforms, False):
 			y += self.acc
-			self.acc += 0.4
+			self.acc += 0.5
 
 			self.rect.center = (x, y)
 		# else stop and update position
@@ -253,17 +254,21 @@ class HighScoreLine(Player):
 
 
 def main():
-	bg = pygame.image.load("backgrounds/bg" + str(random.randint(1,6)) + ".png")
+
+	bg = pygame.image.load("backgrounds/bg" + str(random.randint(1,5)) + ".png")
 
 	bg = pygame.transform.scale(bg, res)
 	bgRect = bg.get_rect()
 
 	bgRect = (0, 0)
 
+	random.seed(datetime.now())
+
 	# choosing random background song.
 	pygame.mixer.music.load('songs/song-' + str(random.randint(0, 5)) +'.ogg')
-	sleep(0.25)
+	sleep(0.5)
 	for i in range(8):
+		random.seed(datetime.now())
 		pygame.mixer.music.queue('songs/song-' + str(random.randint(0, 5)) +'.ogg')
 
 	# Creating background clouds
@@ -292,7 +297,7 @@ def main():
 	plat1 = Platform(True, 'platforms/platform_5.png')
 
 	# Customizing platform
-	plat1.image = pygame.transform.scale(plat1.image, (width, plat1.image.get_height()))
+	plat1.image = pygame.transform.scale(plat1.image, (plat1.image.get_width()*2, plat1.image.get_height()*2))
 	plat1.rect = plat1.image.get_rect()
 	plat1.rect.topleft = (0, height * 5//6 + 3)
 
@@ -443,7 +448,7 @@ def main():
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
 
-		if p1.relpos.x % 2000 == 0 and p1.relpos.x != 0:
+		if p1.relpos.x % (60 * 100) == 0 and p1.relpos.x != 0:
 			PlayerSpeed += 1
 
 		# 1/chancenumber divided by 105/100
@@ -550,17 +555,29 @@ def helpScreen():
 
 def startScreen():
 
-	pygame.mixer.music.load('songs/startup'+str(random.randint(1,2))+'.ogg')
+	COLOR = (245, 245, 245)
+
+	bg = pygame.image.load("backgrounds/startbg.png")
+	bg = pygame.transform.scale(bg, res)
+
+	pygame.mixer.music.load('songs/startup.ogg')
+
+	alphaVal = 0
+
+	bgRect = bg.get_rect()
+	bgRect.center = (width//2, height//2)
 
 	header = pygame.font.Font('fonts/pixelart.ttf', 50)
 	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
 
-	title = header.render(name, BG, (230, 230, 230))
-	start = sub.render('Start', BG, (230, 230, 230))
-	help = sub.render('Help', BG, (230, 230, 230))
-	exit = sub.render('Quit', BG, (230, 230, 230))
+	title = header.render(name, BG2, COLOR)
+	start = sub.render('Start', BG2, COLOR)
+	help = sub.render('Help', BG2, COLOR)
+	exit = sub.render('Quit', BG2, COLOR)
 
-	cursor = sub.render('->', BG, (100, 255, 100))
+	cursor = sub.render('->', BG2, (100, 255, 100))
+
+	print(title.get_width())
 
 	titleRect = title.get_rect()
 
@@ -601,8 +618,15 @@ def startScreen():
 		if not pygame.sprite.spritecollide(new_cloud, cloudsGroup2, False):
 			cloudsGroup2.add(new_cloud)
 
+	global firstEntry
+
 	pygame.mixer.music.play(-1, 0)
 	while True:
+		if firstEntry:
+			if alphaVal < 255:
+				alphaVal += 1
+		else:
+			alphaVal = 255
 
 		for event in pygame.event.get():
 			key = pygame.key.get_pressed()
@@ -628,10 +652,12 @@ def startScreen():
 						sys.exit()
 					elif y == hy:
 						pygame.mixer.music.stop()
+						firstEntry = False
 						helpScreen()
 						startScreen()
 					elif y == sy:
 						pygame.mixer.music.stop()
+						firstEntry = False
 						main()
 						break
 
@@ -647,10 +673,14 @@ def startScreen():
 
 		cursorRect.center = (x, y)
 
-		screen.fill(BG)
+		screen.fill((124, 169, 242))
 
 		cloudsGroup1.draw(screen)
 		cloudsGroup1.update()
+
+		screen.blit(bg, bgRect)
+
+		bg.set_alpha(alphaVal)
 
 		screen.blit(title, titleRect)
 		screen.blit(start, startRect)
@@ -715,5 +745,6 @@ def gameOver(p1, highscore):
 				sys.exit()
 
 		pygame.display.flip()
+
 
 startScreen()
