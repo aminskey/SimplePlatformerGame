@@ -28,7 +28,7 @@ res = (width, height)
 firstEntry = True
 
 # Game name
-name = 'Sky Dash'
+name = 'Sky Dash Battle'
 
 # Setting up window
 screen = pygame.display.set_mode(res)
@@ -65,13 +65,19 @@ FPS = 110
 vec = pygame.math.Vector2
 highscore = vec(0, 0)
 
+# debug value
+debug = True
+
+# for startscreen
+Exit = False
+
 # Clouds Class
 class Clouds(pygame.sprite.Sprite):
 	# General settings
-	def __init__(self, pos):
+	def __init__(self, pos, img="backgroundObjects/cloud.png"):
 		super().__init__()
 
-		self.image = pygame.image.load('backgroundObjects/cloud.png')
+		self.image = pygame.image.load(img)
 		self.rect = self.image.get_rect()
 
 		self.rect.center = pos
@@ -95,18 +101,23 @@ class Clouds(pygame.sprite.Sprite):
 class Platform(pygame.sprite.Sprite):
 	# initial settings
 	# asking Program if landable
-	def __init__(self, Landable, image=None):
+	def __init__(self, Landable, image=None, dir="ground", surface=screen, sizeFactor=1):
 		super().__init__()
+
+		width, height = surface.get_size()
 
 		# if there is no specific image then use random
 		# if not landable then use lava block image.
 		if image == None:
 			if Landable:
-				self.image = pygame.image.load('platforms/platform_' + str(random.randint(0, 5)) + '.png')
+				self.image = pygame.image.load('platforms/'+ dir +'/platform_' + str(random.randint(0, 5)) + '.png')
 			else:
-				self.image = pygame.image.load('badObjects/badplat' + str(random.randint(0,2))+'.png')
+				self.image = pygame.image.load('badObjects/'+ dir +'/badplat' + str(random.randint(0,2))+'.png')
 		else:
 			self.image = pygame.image.load(image)
+
+		if sizeFactor != 1:
+			self.image = pygame.transform.scale(self.image, (self.image.get_width()//sizeFactor, self.image.get_height()//sizeFactor))
 
 		# General settings
 		self.rect = self.image.get_rect()
@@ -116,10 +127,10 @@ class Platform(pygame.sprite.Sprite):
 # Seagulls class
 class Seagull(pygame.sprite.Sprite):
 	# initial settings
-	def __init__(self):
+	def __init__(self, dir="ground"):
 		super().__init__()
 
-		self.image = pygame.image.load('badObjects/seagull.png')
+		self.image = pygame.image.load('badObjects/'+dir+'/seagull.png')
 
 		self.rect = self.image.get_rect()
 		self.rect.center = (random.randint(width, width * 2), random.randint(0, height * 5//24))
@@ -142,11 +153,11 @@ class Seagull(pygame.sprite.Sprite):
 # Player class
 class Player(pygame.sprite.Sprite):
 	# initial settings
-	def __init__(self):
+	def __init__(self, sizeFactor=1, name="Player1"):
 		super().__init__()
 
-		self.image = pygame.image.load("player.png")
-		self.image = pygame.transform.scale(self.image, (40, 40))
+		self.image = pygame.image.load("players/player.png")
+		self.image = pygame.transform.scale(self.image, (40//sizeFactor, 40//sizeFactor))
 
 		self.rect = self.image.get_rect()
 
@@ -155,7 +166,25 @@ class Player(pygame.sprite.Sprite):
 		self.acc = 0
 		self.relpos = vec(self.rect.center)
 
+		self.name = name
+
 		self.jumpstate = True
+
+		self.dead = False
+
+		self.jumpGame = False
+
+	def move(self):
+		x, y = self.rect.center
+
+		keys = pygame.key.get_pressed()
+
+		if keys[K_RIGHT]:
+			x += PSD
+		if keys[K_LEFT]:
+			x -= PSD
+
+		self.rect.center = (x, y)
 
 	# Jump mechanism
 	def jump(self):
@@ -231,12 +260,57 @@ class Player(pygame.sprite.Sprite):
 		# Updating relative position
 		self.relpos.x += PlayerSpeed
 
+		if self.jumpGame:
+			self.move()
+
 		# If not in air allow jump mechanism
 		if self.jumpstate:
 			self.jump()
 
 		# Running virtual gravity method
 		self.gravity()
+
+class Player2(Player):
+	def __init__(self, sizeFactor=1, name="Player2"):
+		super().__init__()
+		self.image = pygame.image.load("players/player2.png")
+		self.image = pygame.transform.scale(self.image, (40//sizeFactor, 40//sizeFactor))
+
+		self.rect = self.image.get_rect()
+
+		self.rect.center = (width//2, 0)
+
+		self.name = name
+
+	def jump(self):
+		x, y = self.rect.center
+
+
+		# key mapping
+		keys = pygame.key.get_pressed()
+
+
+		# Event handling
+		if keys[K_w]:
+
+			# jumping
+			y -= 20
+
+		# Updating position
+		self.rect.center = (x, y)
+
+	def move(self):
+		x, y = self.rect.center
+
+		keys = pygame.key.get_pressed()
+
+		if keys[K_d]:
+			x += PSD
+		if keys[K_a]:
+			x -= PSD
+
+		self.rect.center = (x, y)
+	pass
 
 # ScoreLine class
 class HighScoreLine(Player):
@@ -252,6 +326,21 @@ class HighScoreLine(Player):
 		self.rect.center = (highscore.x, height/2)
 		self.x, self.y = self.rect.center
 
+class PlayerTag(pygame.sprite.Sprite):
+	def __init__(self, player, number):
+		super().__init__()
+
+		font = pygame.font.Font("fonts/pixelart.ttf", 40)
+
+		self.image = font.render(number, BG2, (55, 255, 55))
+
+		self.player = player
+
+		self.rect = self.image.get_rect()
+		self.rect.midbottom = self.player.rect.midtop
+
+	def update(self):
+		self.rect.midbottom = self.player.rect.midtop
 
 def main():
 
@@ -294,15 +383,15 @@ def main():
 	players.add(p1)
 
 	# Defining ground platform
-	plat1 = Platform(True, 'platforms/platform_5.png')
+	plat1 = Platform(True, 'platforms/ground/platform_5.png')
 
 	# Customizing platform
-	plat1.image = pygame.transform.scale(plat1.image, (plat1.image.get_width()*2, plat1.image.get_height()*2))
+	plat1.image = pygame.transform.scale(plat1.image, (plat1.image.get_width()*3, plat1.image.get_height()*3))
 	plat1.rect = plat1.image.get_rect()
 	plat1.rect.topleft = (0, height * 5//6 + 3)
 
 
-	plat2 = Platform(True, 'platforms/platform_0.png')
+	plat2 = Platform(True, 'platforms/ground/platform_0.png')
 
 	plat2.rect.center = (width * 1.25, height * 4//6)
 
@@ -323,8 +412,8 @@ def main():
 	while True:
 
 		# PlayerSpeed Text
-		ps1 = sub.render('Player Speed:', BG2, (55, 55, 255))
-		ps2 = sub.render(str(PlayerSpeed), BG2, (55, 55, 255))
+		ps1 = sub.render('Player Speed:', BG2, (55, 255, 55))
+		ps2 = sub.render(str(PlayerSpeed), BG2, (55, 255, 55))
 
 
 		# Rectangle
@@ -336,8 +425,8 @@ def main():
 		ps2Rect.center = (width * 11//16, ps2.get_height()*3)
 
 		# HUD highscore text
-		hs1 = sub.render('Current Highscore: ', BG2, (55,55,255))
-		hs2 = sub.render(str(highscore.x//100), BG2, (55, 55, 255))
+		hs1 = sub.render('Current Highscore: ', BG2, (55, 255, 55))
+		hs2 = sub.render(str(highscore.x//100), BG2, (55, 255, 55))
 
 		# text rectangle
 		hs1Rect = hs1.get_rect()
@@ -348,8 +437,8 @@ def main():
 		hs2Rect.center = (width * 11//16, hs2.get_height())
 
 		# HUD Player text
-		score1 = sub.render('Player Score', BG2, (55,55,255))
-		score2 = sub.render(str(p1.relpos.x//100), BG2, (55,55,255))
+		score1 = sub.render('Player Score', BG2, (55, 255, 55))
+		score2 = sub.render(str(p1.relpos.x//100), BG2, (55, 255, 55))
 
 		# text rectangle
 		score1Rect = score1.get_rect()
@@ -486,6 +575,401 @@ def main():
 		clock.tick(FPS)
 
 	pygame.mixer.music.unload()
+def jumpGame():
+	# numberGroup = pygame.sprite.Group()
+	platLeft = pygame.sprite.Group()
+	platRight = pygame.sprite.Group()
+
+
+	bg = pygame.image.load("backgrounds/dualbg.png")
+	bg = pygame.transform.scale(bg, res)
+
+	bgRect = bg.get_rect()
+	bgRect.topleft = (0, 0)
+
+	p1 = Player()
+	p1.jumpGame = True
+
+
+	p2 = Player2()
+	p2.jumpGame = True
+
+	players.add(p1)
+	players.add(p2)
+
+	sc1 = pygame.Surface((width/2 - 50, height))
+	sc1Rect = sc1.get_rect()
+	sc1Rect.topleft = (0, 0)
+
+	sc2 = pygame.Surface((width/2 - 50, height))
+	sc2Rect = sc2.get_rect()
+	sc2Rect.topleft = (width//2+50, 0)
+
+	print(sc1.get_size())
+
+	platbase = Platform(True, "platforms/space/platform_5.png", "hahah", sc1)
+	platbase.image = pygame.transform.scale(platbase.image, (sc1.get_width(), platbase.image.get_height()))
+
+	platbase.rect = platbase.image.get_rect()
+	platbase.rect.topleft = (0, sc1.get_height() - platbase.image.get_height())
+
+	p1.rect.midbottom = platbase.rect.midtop
+	p2.rect.midbottom = platbase.rect.midtop
+
+
+	platLeft.add(platbase)
+	platRight.add(platbase)
+
+	platforms.add(platbase)
+	all_sprites.add(platbase)
+
+	while True:
+		for event in pygame.event.get():
+			if event == pygame.QUIT:
+				pygame.quit()
+				sys.exit()
+
+		for player in players.sprites():
+
+			if player.rect.y < sc1.get_height() * 1//3:
+				
+				for i in range(5):
+					new_plat = Platform(True, None, "space", sc1)
+					new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
+					new_plat.rect = new_plat.image.get_rect()
+
+					new_plat.rect.center = (random.randrange(0, sc1.get_width()), random.randrange(0, sc1.get_height()))
+
+
+					if pygame.sprite.spritecollide(new_plat, platforms, False):
+						new_plat.kill()
+					else:
+						if player.name == "Player1":
+							platLeft.add(new_plat)
+							platforms.add(new_plat)
+							all_sprites.add(new_plat)
+
+						if player.name == "Player2":
+							platRight.add(new_plat)
+							platforms.add(new_plat)
+							all_sprites.add(new_plat)
+
+
+				if player.name == "Player1":
+					for platform in platLeft.sprites():
+						x, y = platform.rect.center
+						y += sc1.get_height() * 1//3
+
+						platform.rect.center = x, y
+
+				if player.name == "Player2":
+					for platform in platRight.sprites():
+						x, y = platform.rect.center
+						y += sc1.get_height() * 1//3
+
+						platform.rect.center = x, y
+		players.update()
+
+		screen.blit(bg, bgRect)
+
+		sc1.fill((0, 0, 0))
+		sc2.fill((0, 0, 0))
+
+		sc1.blit(p1.image, p1.rect)
+		sc2.blit(p2.image, p2.rect)
+
+		sc1.blit(platbase.image, platbase.rect)
+		sc2.blit(platbase.image, platbase.rect)
+
+		platLeft.draw(sc1)
+		platRight.draw(sc2)
+
+		screen.blit(sc1, sc1Rect)
+		screen.blit(sc2, sc2Rect)
+
+		pygame.display.update()
+		clock.tick(FPS)
+
+def lastman():
+
+	numberGroup = pygame.sprite.Group()
+
+	bg = pygame.image.load("backgrounds/dualbg.png")
+
+	bg = pygame.transform.scale(bg, res)
+
+	bgRect = bg.get_rect()
+
+	bgRect.topleft = (0, 0)
+
+	random.seed(datetime.now())
+
+	# Importing global variables
+	global PlayerSpeed
+	global CHANCE
+
+	PlayerSpeed = PlayerSpeed + 1
+
+	line = pygame.Surface((width, 20))
+	line.fill((0, 0, 0))
+
+	line.set_alpha(200)
+
+	lineRect = line.get_rect()
+	lineRect.topleft = (0, height * 1//2 - 10)
+
+	# Split-screen
+	sc1 = pygame.Surface((width, height/2))
+	sc2 = pygame.Surface((width, height/2))
+
+	# Splitscreen rect
+	sc1Rect = sc1.get_rect()
+	sc2Rect = sc2.get_rect()
+
+	# Positioning screens
+	sc1Rect.topleft = (0, 0)
+	sc2Rect.topleft = (0, height/2)
+
+	# Screen 2 background
+	bg2 = pygame.image.load("backgrounds/dualbg2.png")
+	bg2 = pygame.transform.scale(bg2, (sc1.get_width(), sc1.get_height()))
+
+	bg2Rect = bg2.get_rect()
+	bg2Rect.topleft = (0, 0)
+
+	# defining player
+	p1 = Player()
+	players.add(p1)
+
+	p1Tag = PlayerTag(p1, "1")
+
+	p2 = Player2()
+	players.add(p2)
+
+	p2Tag = PlayerTag(p2, "2")
+
+
+	numberGroup.add(p1Tag)
+	numberGroup.add(p2Tag)
+
+	# Defining ground platform
+	plat1 = Platform(True, 'platforms/space/platform_5.png', None, sc1)
+
+	# Customizing platform
+	plat1.rect.topleft = (sc1.get_width() * 0.5, sc1.get_height() * 5//6 + 3)
+
+
+	plat2 = Platform(True, 'platforms/space/platform_0.png', None, sc1)
+
+	plat2.image = pygame.transform.scale(plat2.image, (plat2.image.get_width() * 2//3, plat2.image.get_width() * 2//3))
+
+	plat2.rect = plat2.image.get_rect()
+	plat2.rect.center = (sc1.get_width() * 1.15, sc1.get_height() * 4//6)
+
+	# Add initial platform to groups
+	platforms.add(plat1)
+	all_sprites.add(plat1)
+
+	platforms.add(plat2)
+	all_sprites.add(plat2)
+
+
+	# Creating font object
+	header = pygame.font.Font('fonts/segaArt.ttf', 100)
+	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
+
+	ended = False
+	winner = None
+	counter = 0
+
+	while True:
+
+		# PlayerSpeed Text
+		ps1 = sub.render('Player Speed:', BG2, (55, 255, 55))
+		ps2 = sub.render(str(PlayerSpeed), BG2, (55, 55, 255))
+
+		# Win dialog
+		win = header.render('You Win', BG2, (55, 55, 255))
+
+
+		# Rectangle
+		ps1Rect = ps1.get_rect()
+		ps2Rect = ps2.get_rect()
+
+		winRect = win.get_rect()
+
+		# Position
+		ps1Rect.center = (width * 6//16, ps1.get_height()*3)
+		ps2Rect.center = (width * 11//16, ps2.get_height()*3)
+
+		winRect.center = (width/2, height/2)
+
+		# Window event handler
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				sys.exit()
+
+
+
+		x, y = p1.rect.center
+
+		# Making the platforms move to create an illusion
+		# That the player is moving
+		for plat in platforms:
+			px, py = plat.rect.center
+			px -= PlayerSpeed
+			plat.rect.center = (px, py)
+
+
+		# Put in for loop for user to increase game intensity
+		for i in range(1):
+			# randomizing chance
+			random.seed(datetime.now())
+
+			choice = random.randint(0, CHANCE)
+
+			if choice == 0:
+				new_plat = Platform(False, None, "space", sc1)
+
+				new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
+
+				danger.add(new_plat)
+			else :
+				new_plat = Platform(True, None, "space", sc1)
+
+				new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
+
+				new_plat.rect = new_plat.image.get_rect()
+				new_plat.rect.center = (random.randrange(sc1.get_width() * 1.05, sc1.get_width() * 1.5), random.randrange(sc1.get_height()*8//12, sc1.get_height()*5//6))
+
+
+			# if platforms overlap
+			# remove them
+			if not pygame.sprite.spritecollide(new_plat, platforms, False):
+				platforms.add(new_plat)
+				all_sprites.add(new_plat)
+			else:
+				new_plat.kill()
+
+
+		if not ended:
+			for i in range(0, 2):
+				x, y = players.sprites()[i].rect.center
+				if y > sc1.get_height() * 2 or pygame.sprite.spritecollide(players.sprites()[i], danger, False) or x < 0:
+
+					delPlayer = players.sprites()[i]
+
+					all_sprites.remove(delPlayer)
+					players.remove(delPlayer)
+
+					delPlayer.kill()
+
+					winner = players.sprites()[0]
+
+					PlayerSpeed = 0
+
+					ended = True
+					break
+
+		if not players:
+			PlayerSpeed = PSD
+			CHANCE = 128
+			gameOver(p1, None)
+
+		# if platform is out of screen or if there are more than 10 platforms then destroy
+		i = 0
+		for plat in platforms:
+			i+=1
+			px, py = plat.rect.topright
+			if px <= 0 or i > 10:
+				plat.kill()
+
+		# When players score divided by 100 gives a remainder of 0.
+		# And if player score is not zero its self
+		# In this case it's only used to increment the speed since this is a race.
+
+		if p1.relpos.x % (10 * 100) == 0 and p1.relpos.x != 0:
+			PlayerSpeed += 1
+
+		# 1/chancenumber divided by 105/100
+			CHANCE //=1.05
+
+		players.update()
+
+		numberGroup.update()
+
+
+		sc1.blit(bg, bgRect)
+		sc2.blit(bg2, bg2Rect)
+
+		sc1.blit(p1.image, p1.rect)
+		sc1.blit(p1Tag.image, p1Tag.rect)
+
+
+		sc2.blit(p2.image, p2.rect)
+		sc2.blit(p2Tag.image, p2Tag.rect)
+
+
+
+		# Drawing all sprites to screen
+		all_sprites.draw(sc1)
+		all_sprites.draw(sc2)
+
+		# Showing splitscreen
+		screen.blit(sc1, sc1Rect)
+		screen.blit(sc2, sc2Rect)
+
+		screen.blit(line, lineRect)
+
+		# Sending Highscore and player score data to screen
+		screen.blit(ps1, ps1Rect)
+		screen.blit(ps2, ps2Rect)
+
+
+		if ended:
+
+			win2 = sub.render(winner.name, BG2, (55, 255, 55))
+
+			win2Rect = win2.get_rect()
+
+			win2Rect.center = (width//2, height * 2//3)
+
+			screen.blit(win2, win2Rect)
+
+
+			screen.blit(win, winRect)
+			keys = pygame.key.get_pressed()
+
+			if keys[K_RETURN]:
+				sleep(0.5)
+				for sprite in all_sprites:
+					sprite.kill()
+
+				CHANCE = 128
+				PlayerSpeed = PSD
+				startScreen()
+			if keys[K_r]:
+				sleep(0.5)
+				for sprite in all_sprites:
+					sprite.kill()
+
+				CHANCE = 128
+				PlayerSpeed = PSD
+
+				winner.kill()
+				winner = None
+
+				lastman()
+				startScreen()
+
+		# Refreshing screen
+		pygame.display.update()
+
+		# Fixed Frame rate 110 recommended unless old computer
+		clock.tick(FPS)
+
+	pygame.mixer.music.unload()
 
 def helpScreen():
 	pygame.mixer.music.load('songs/help.ogg')
@@ -553,6 +1037,39 @@ def helpScreen():
 		clock.tick(FPS-10)
 		pygame.display.update()
 
+def introScreen():
+
+	logo = pygame.image.load("icons/gameLogo.png")
+	logoRect = logo.get_rect()
+
+	logoRect.center = (width/2, height/2)
+
+	i = 0
+	## Game Logo
+
+	for i in range(255):
+		screen.fill((0, 0, 0))
+		screen.blit(logo, logoRect)
+
+		logo.set_alpha(i)
+
+		pygame.display.update()
+		clock.tick(FPS)
+
+	sleep(0.5)
+
+	while i > 0:
+		screen.fill((0, 0, 0))
+		screen.blit(logo, logoRect)
+
+		logo.set_alpha(i)
+
+		i -= 1
+
+		pygame.display.update()
+		clock.tick(FPS)
+
+
 def startScreen():
 
 	COLOR = (245, 245, 245)
@@ -571,63 +1088,76 @@ def startScreen():
 	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
 
 	title = header.render(name, BG2, COLOR)
-	start = sub.render('Start', BG2, COLOR)
+	start = sub.render('Arcade', BG2, COLOR)
+	multi = sub.render('Multiplayer', BG2, COLOR)
 	help = sub.render('Help', BG2, COLOR)
 	exit = sub.render('Quit', BG2, COLOR)
 
 	cursor = sub.render('->', BG2, (100, 255, 100))
 
-	print(title.get_width())
-
 	titleRect = title.get_rect()
 
 	startRect = start.get_rect()
+	multiRect = multi.get_rect()
 	helpRect = help.get_rect()
 	exitRect = exit.get_rect()
 
 	cursorRect = cursor.get_rect()
 
-	titleRect.center = (width/2, height * 1//3)
+	titleRect.center = (width/2, height * 1//2)
 
 	startRect.center = (width/2, height * 1//2 - 10)
-	helpRect.center = (width/2, height * 1//2 + 10)
-	exitRect.center = (width/2, height * 1//2 + 30)
+	multiRect.center = (width/2, height * 1//2 + 10)
+	helpRect.center = (width/2, height * 1//2 + 30)
+	exitRect.center = (width/2, height * 1//2 + 50)
 
 	cursorRect.center = (width//2 - 50, height * 1//2 - 10)
 
 	x, y = cursorRect.center
 
-	sx, sy = startRect.center
-	hx, hy = helpRect.center
-	ex, ey = exitRect.center
-
-	cloudsGroup1 = pygame.sprite.Group()
-	cloudsGroup2 = pygame.sprite.Group()
-
-	for i in range(30):
-		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
-
-		if not pygame.sprite.spritecollide(new_cloud, cloudsGroup1, False):
-			cloudsGroup1.add(new_cloud)
-
-	sleep(0.125)
-
-	for i in range(10):
-		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
-
-		if not pygame.sprite.spritecollide(new_cloud, cloudsGroup2, False):
-			cloudsGroup2.add(new_cloud)
+	sx, sy = startRect.midleft
+	hx, hy = helpRect.midleft
+	ex, ey = exitRect.midleft
+	mx, my = multiRect.midleft
 
 	global firstEntry
 
+
 	pygame.mixer.music.play(-1, 0)
-	while True:
+
+	global Exit
+
+	while not Exit:
 		if firstEntry:
 			if alphaVal < 255:
 				alphaVal += 1
 		else:
 			alphaVal = 255
 
+		for event in pygame.event.get():
+			key = pygame.key.get_pressed()
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				sys.exit()
+			if event.type == pygame.KEYDOWN:
+				Exit = True
+
+		screen.fill((255, 255, 255))
+
+		screen.blit(bg, bgRect)
+		screen.blit(title, titleRect)
+
+		bg.set_alpha(alphaVal)
+
+		pygame.display.update()
+		clock.tick(FPS)
+
+
+	bg.set_alpha(255)
+
+	titleRect.center = (width/2, height * 1//3)
+
+	while True:
 		for event in pygame.event.get():
 			key = pygame.key.get_pressed()
 			if event.type == pygame.QUIT:
@@ -660,6 +1190,24 @@ def startScreen():
 						firstEntry = False
 						main()
 						break
+					elif y == my:
+						pygame.mixer.music.stop()
+						pygame.mixer.music.load("songs/dual.ogg")
+
+						pygame.mixer.music.play(-1, 0)
+
+						firstEntry = False
+						lastman()
+
+						break
+				if y == ey:
+					x = ex - 20
+				elif y == hy:
+					x = hx - 20
+				elif y == sy:
+					x = sx - 20
+				elif y == my:
+					x = mx - 20
 
 				if y > ey:
 					y = sy
@@ -673,24 +1221,16 @@ def startScreen():
 
 		cursorRect.center = (x, y)
 
-		screen.fill((124, 169, 242))
-
-		cloudsGroup1.draw(screen)
-		cloudsGroup1.update()
+		screen.fill((255, 255, 255))
 
 		screen.blit(bg, bgRect)
 
-		bg.set_alpha(alphaVal)
-
 		screen.blit(title, titleRect)
 		screen.blit(start, startRect)
+		screen.blit(multi, multiRect)
 		screen.blit(exit, exitRect)
 		screen.blit(help, helpRect)
 		screen.blit(cursor, cursorRect)
-
-		cloudsGroup2.draw(screen)
-		cloudsGroup2.update()
-
 
 		pygame.display.update()
 		clock.tick(FPS)
@@ -700,9 +1240,12 @@ def gameOver(p1, highscore):
 
 
 	pygame.mixer.music.load('sounds/gameOver.ogg')
-	if p1.relpos.x >= highscore.x:
-		highscore.x = p1.relpos.x
 
+	if highscore != None:
+		if p1.relpos.x >= highscore.x:
+			highscore.x = p1.relpos.x
+	else:
+		highscore = vec(0, 0)
 
 	pygame.mixer.music.stop()
 
@@ -745,6 +1288,9 @@ def gameOver(p1, highscore):
 				sys.exit()
 
 		pygame.display.flip()
+
+if not debug:
+	introScreen()
 
 
 startScreen()
