@@ -21,6 +21,15 @@ clock = pygame.time.Clock()
 width = 900
 height = 700
 
+# joystick
+p1Pad = pygame.joystick.Joystick(0)
+p1Pad.init()
+
+if pygame.joystick.get_count() > 1:
+	p2Pad = pygame.joystick.Joystick(1)
+	p2Pad.init()
+
+
 # resolution tuple
 res = (width, height)
 
@@ -206,7 +215,7 @@ class Player(pygame.sprite.Sprite):
 
 
 		# Event handling
-		if keys[K_SPACE] or mkeys[0]:
+		if keys[K_SPACE] or mkeys[0] or p1Pad.get_button(0):
 
 			# jumping
 			y -= 20
@@ -341,7 +350,7 @@ class Player2(Player):
 
 
 		# Event handling
-		if keys[K_w]:
+		if keys[K_w] or p2Pad.button(0):
 
 			# jumping
 			y -= 20
@@ -740,6 +749,9 @@ def jumpGame():
 
 def multiplayer():
 
+	if pygame.joystick.get_count() < 2:
+		startScreen()
+
 	aliens = pygame.sprite.Group()
 
 	numberGroup = pygame.sprite.Group()
@@ -1096,7 +1108,7 @@ def helpScreen():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit(0)
-			if event.type == pygame.KEYDOWN:
+			if event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWM:
 				pygame.mixer.music.stop()
 				startScreen()
 
@@ -1218,7 +1230,7 @@ def startScreen():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
-			if event.type == pygame.KEYDOWN:
+			if event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
 				Exit = True
 
 		screen.fill((255, 255, 255))
@@ -1242,11 +1254,11 @@ def startScreen():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
-			if event.type == KEYDOWN:
+			if event.type == KEYDOWN or event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYAXISMOTION:
 
-				if key[K_UP]:
+				if key[K_UP] or p1Pad.get_axis(0) > 0.1:
 					y -= 20
-				if key[K_DOWN]:
+				if key[K_DOWN] or p1Pad.get_axis(0) < -0.1:
 					y += 20
 				if key[K_p]:
 					pygame.mixer.quit()
@@ -1254,7 +1266,7 @@ def startScreen():
 					pygame.mixer.init()
 
 
-				if key[K_SPACE] or key[K_RETURN]:
+				if key[K_SPACE] or key[K_RETURN] or p1Pad.get_button(0):
 					if y == ey:
 						pygame.mixer.music.stop()
 						pygame.quit()
@@ -1334,8 +1346,6 @@ def gameOver():
 	textRect.midbottom = (width // 2, height//3)
 	text2Rect.midbottom = (width // 2, height * 3//6)
 
-#	screen.fill(BG)
-
 	screen.blit(text, textRect)
 	screen.blit(text2, text2Rect)
 
@@ -1346,7 +1356,7 @@ def gameOver():
 
 	while True:
 		for event in pygame.event.get():
-			if event.type == pygame.KEYDOWN:
+			if event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
 				sleep(0.25)
 				for sprite in all_sprites:
 					sprite.kill()
