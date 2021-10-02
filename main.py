@@ -5,7 +5,6 @@ import pygame, sys, random
 from pygame.locals import *
 from datetime import datetime
 from time import sleep, time
-from os import remove
 from warnings import filterwarnings
 
 # filter warning
@@ -63,7 +62,6 @@ FPS = 110
 
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
-highscore = vec(0, 0)
 
 # debug value
 debug = True
@@ -127,10 +125,15 @@ class Platform(pygame.sprite.Sprite):
 # Seagulls class
 class Seagull(pygame.sprite.Sprite):
 	# initial settings
-	def __init__(self, dir="ground"):
+	def __init__(self, dir="ground", surface=screen, image=None):
 		super().__init__()
 
-		self.image = pygame.image.load('badObjects/'+dir+'/seagull.png')
+		width, height = surface.get_size()
+
+		if image == None:
+			self.image = pygame.image.load('badObjects/'+dir+'/seagull.png')
+		else:
+			self.image = pygame.image.load(image)
 
 		self.rect = self.image.get_rect()
 		self.rect.center = (random.randint(width, width * 2), random.randint(0, height * 5//24))
@@ -142,7 +145,12 @@ class Seagull(pygame.sprite.Sprite):
 		self.x -= PlayerSpeed * 1.15
 		self.rect.center = (self.x, self.y)
 
-		# if seagull out of screen then kill it
+		if pygame.sprite.spritecollide(self, players, False):
+			self.image = pygame.image.load("misc/explosion.png")
+			self.rect = self.image.get_rect()
+			self.rect.center = (self.x, self.y)
+
+		# if seagull is out of screen then kill it
 		if self.x < 0:
 			all_sprites.remove(self)
 			danger.remove(self)
@@ -257,6 +265,15 @@ class Player(pygame.sprite.Sprite):
 				self.jumpstate = True
 
 
+		if pygame.sprite.spritecollide(self, danger, False):
+
+			self.image = pygame.image.load("misc/explosion.png")
+			self.image = pygame.transform.scale(self.image, (100, 100))
+
+			self.rect = self.image.get_rect()
+			self.rect.midtop = (x, y)
+
+
 		# Updating relative position
 		self.relpos.x += PlayerSpeed
 
@@ -269,6 +286,39 @@ class Player(pygame.sprite.Sprite):
 
 		# Running virtual gravity method
 		self.gravity()
+
+class Boss(pygame.sprite.Sprite):
+	def __init__(self):
+		super().__init__()
+
+class SpiderBoss(pygame.sprite.Sprite):
+	def __init__(self, surface=screen):
+
+		super().__init__()
+
+		self.alphaVal = 0
+
+
+		width, height = surface.get_size()
+
+		self.image = pygame.image.load("bosses/spider/SpiderBoss.png")
+
+		self.rect = self.image.get_rect()
+		self.rect.center = (width//2, height*2)
+
+		self.entry = False
+
+
+	def opening(self):
+		self.image.set_alpha(self.alphaVal)
+
+		if self.alphaVal < 254:
+			self.alphaVal += 1
+
+
+	def update(self):
+		self.opening()
+
 
 class Player2(Player):
 	def __init__(self, sizeFactor=1, name="Player2"):
@@ -312,20 +362,6 @@ class Player2(Player):
 		self.rect.center = (x, y)
 	pass
 
-# ScoreLine class
-class HighScoreLine(Player):
-	def __init__(self):
-		super().__init__()
-
-		self.image = pygame.Surface((20, height))
-		self.image.fill((10, 10, 255))
-
-		self.image.set_alpha(50)
-
-		self.rect = self.image.get_rect()
-		self.rect.center = (highscore.x, height/2)
-		self.x, self.y = self.rect.center
-
 class PlayerTag(pygame.sprite.Sprite):
 	def __init__(self, player, number):
 		super().__init__()
@@ -341,6 +377,56 @@ class PlayerTag(pygame.sprite.Sprite):
 
 	def update(self):
 		self.rect.midbottom = self.player.rect.midtop
+
+def bossFight():
+	boss = pygame.sprite.Group()
+
+	bg = pygame.image.load("backgrounds/bg1.png")
+	bg = pygame.transform.scale(bg, res)
+
+	bgRect = bg.get_rect()
+	bgRect.topleft = (0, 0)
+
+	spider = SpiderBoss()
+
+	spider.rect.center = (width//2, height//2)
+
+	boss.add(spider)
+	all_sprites.add(spider)
+
+	p1 = Player()
+	p1.jumpGame = True
+
+	players.add(p1)
+	all_sprites.add(p1)
+
+	plat1 = Platform(True, "platforms/ground/platform_5.png")
+
+	plat1.image = pygame.transform.scale(plat1.image, (plat1.image.get_width()*2, plat1.image.get_height()*2))
+	plat1.rect = plat1.image.get_rect()
+
+	plat1.rect.midtop = ((width - plat1.image.get_width())/2, height - plat1.image.get_height())
+
+	platforms.add(plat1)
+	all_sprites.add(plat1)
+
+	while True:
+
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				sys.exit()
+
+		players.update()
+		boss.update()
+
+		screen.blit(bg, bgRect)
+
+		all_sprites.draw(screen)
+
+		pygame.display.update()
+		clock.tick(FPS)
+
 
 def main():
 
@@ -369,13 +455,8 @@ def main():
 			all_sprites.add(new_cloud)
 
 	# Importing global variables
-	global highscore
 	global PlayerSpeed
 	global CHANCE
-
-	# Creating scoreLine
-	scoreLine = HighScoreLine()
-	all_sprites.add(scoreLine)
 
 	# defining player
 	p1 = Player()
@@ -424,17 +505,6 @@ def main():
 		ps1Rect.center = (width * 6//16, ps1.get_height()*3)
 		ps2Rect.center = (width * 11//16, ps2.get_height()*3)
 
-		# HUD highscore text
-		hs1 = sub.render('Current Highscore: ', BG2, (55, 255, 55))
-		hs2 = sub.render(str(highscore.x//100), BG2, (55, 255, 55))
-
-		# text rectangle
-		hs1Rect = hs1.get_rect()
-		hs2Rect = hs2.get_rect()
-
-		# Positioning text
-		hs1Rect.center = (width * 6//16, hs1.get_height())
-		hs2Rect.center = (width * 11//16, hs2.get_height())
 
 		# HUD Player text
 		score1 = sub.render('Player Score', BG2, (55, 255, 55))
@@ -466,12 +536,6 @@ def main():
 			plat.rect.center = (px, py)
 
 
-		# if player's x is greater than highscore bar's x
-		# Then update it
-		if x > scoreLine.x:
-			scoreLine.x -= PlayerSpeed
-
-
 		# Put in for loop for user to increase game intensity
 		for i in range(1):
 			# randomizing chance
@@ -501,7 +565,7 @@ def main():
 		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False) or x < 0:
 			PlayerSpeed = PSD
 			CHANCE = 128
-			gameOver(p1, highscore)
+			gameOver()
 
 		# if platform is out of screen or if there are more than 10 platforms then destroy
 		i = 0
@@ -526,26 +590,14 @@ def main():
 						all_sprites.add(new_seagull)
 						danger.add(new_seagull)
 
-		# Checking if player's relative position greater then highscore position
-		# If yes then update
-		if p1.relpos.x >= highscore.x:
-			highscore.x = p1.relpos.x
-			scoreLine.x = x
-		else:
-			scoreLine.x = highscore.x
-
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
 
-		if p1.relpos.x % (60 * 100) == 0 and p1.relpos.x != 0:
+		if p1.relpos.x % (70 * 100) == 0 and p1.relpos.x != 0:
 			PlayerSpeed += 1
 
 		# 1/chancenumber divided by 105/100
 			CHANCE //=1.05
-
-
-		# Updating scoreline
-		scoreLine.rect.center = (scoreLine.x, height//2)
 
 
 		# Updating sprite groups
@@ -557,10 +609,6 @@ def main():
 
 		# Drawing all sprites to screen
 		all_sprites.draw(screen)
-
-		# Sending Highscore and player score data to screen
-		screen.blit(hs1, hs1Rect)
-		screen.blit(hs2, hs2Rect)
 
 		screen.blit(score1, score1Rect)
 		screen.blit(score2, score2Rect)
@@ -607,7 +655,7 @@ def jumpGame():
 
 	print(sc1.get_size())
 
-	platbase = Platform(True, "platforms/space/platform_5.png", "hahah", sc1)
+	platbase = Platform(True, "platforms/space/platform_5.png", None, sc1)
 	platbase.image = pygame.transform.scale(platbase.image, (sc1.get_width(), platbase.image.get_height()))
 
 	platbase.rect = platbase.image.get_rect()
@@ -632,7 +680,7 @@ def jumpGame():
 		for player in players.sprites():
 
 			if player.rect.y < sc1.get_height() * 1//3:
-				
+
 				for i in range(5):
 					new_plat = Platform(True, None, "space", sc1)
 					new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
@@ -690,9 +738,12 @@ def jumpGame():
 		pygame.display.update()
 		clock.tick(FPS)
 
-def lastman():
+def multiplayer():
+
+	aliens = pygame.sprite.Group()
 
 	numberGroup = pygame.sprite.Group()
+
 
 	bg = pygame.image.load("backgrounds/dualbg.png")
 
@@ -784,9 +835,14 @@ def lastman():
 
 	while True:
 
-		# PlayerSpeed Text
+		counter += PlayerSpeed
+
+		# PlayerSpeed And Distance Text
 		ps1 = sub.render('Player Speed:', BG2, (55, 255, 55))
 		ps2 = sub.render(str(PlayerSpeed), BG2, (55, 55, 255))
+
+		pd1 = sub.render('Player Distance:', BG2, (55, 255, 55))
+		pd2 = sub.render(str(counter//100), BG2, (55, 55, 255))
 
 		# Win dialog
 		win = header.render('You Win', BG2, (55, 55, 255))
@@ -796,11 +852,17 @@ def lastman():
 		ps1Rect = ps1.get_rect()
 		ps2Rect = ps2.get_rect()
 
+		pd1Rect = pd1.get_rect()
+		pd2Rect = pd1.get_rect()
+
 		winRect = win.get_rect()
 
 		# Position
-		ps1Rect.center = (width * 6//16, ps1.get_height()*3)
-		ps2Rect.center = (width * 11//16, ps2.get_height()*3)
+		ps1Rect.center = (width * 6//16, ps1.get_height()*2)
+		ps2Rect.center = (width * 11//16, ps2.get_height()*2)
+
+		pd1Rect.center = (width * 6//16, pd1.get_height()*3)
+		pd2Rect.center = (width * 13//16, pd2.get_height()*3)
 
 		winRect.center = (width/2, height/2)
 
@@ -825,10 +887,11 @@ def lastman():
 		# Put in for loop for user to increase game intensity
 		for i in range(1):
 			# randomizing chance
-			random.seed(datetime.now())
+		#	random.seed(datetime.now())
 
-			choice = random.randint(0, CHANCE)
+		#	choice = random.randint(0, CHANCE)
 
+			'''
 			if choice == 0:
 				new_plat = Platform(False, None, "space", sc1)
 
@@ -836,12 +899,14 @@ def lastman():
 
 				danger.add(new_plat)
 			else :
-				new_plat = Platform(True, None, "space", sc1)
+			'''
 
-				new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
+			new_plat = Platform(True, None, "space", sc1)
 
-				new_plat.rect = new_plat.image.get_rect()
-				new_plat.rect.center = (random.randrange(sc1.get_width() * 1.05, sc1.get_width() * 1.5), random.randrange(sc1.get_height()*8//12, sc1.get_height()*5//6))
+			new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
+
+			new_plat.rect = new_plat.image.get_rect()
+			new_plat.rect.center = (random.randrange(sc1.get_width() * 1.05, sc1.get_width() * 1.5), random.randrange(sc1.get_height()*8//12, sc1.get_height()*5//6))
 
 
 			# if platforms overlap
@@ -889,15 +954,28 @@ def lastman():
 		# And if player score is not zero its self
 		# In this case it's only used to increment the speed since this is a race.
 
-		if p1.relpos.x % (10 * 100) == 0 and p1.relpos.x != 0:
+		if counter > 9000 and counter % (20 * 100) == 0 and counter != 0:
+			alien = Seagull("space", sc1)
+
+			if pygame.sprite.spritecollide(alien, aliens, False):
+				alien.kill()
+			else:
+				danger.add(alien)
+				aliens.add(alien)
+				all_sprites.add(alien)
+
+
+		if counter % (2 * 1000) == 0 and counter != 0:
 			PlayerSpeed += 1
 
 		# 1/chancenumber divided by 105/100
 			CHANCE //=1.05
 
 		players.update()
-
 		numberGroup.update()
+
+		aliens.update()
+
 
 
 		sc1.blit(bg, bgRect)
@@ -910,8 +988,6 @@ def lastman():
 		sc2.blit(p2.image, p2.rect)
 		sc2.blit(p2Tag.image, p2Tag.rect)
 
-
-
 		# Drawing all sprites to screen
 		all_sprites.draw(sc1)
 		all_sprites.draw(sc2)
@@ -922,9 +998,11 @@ def lastman():
 
 		screen.blit(line, lineRect)
 
-		# Sending Highscore and player score data to screen
 		screen.blit(ps1, ps1Rect)
 		screen.blit(ps2, ps2Rect)
+
+		screen.blit(pd1, pd1Rect)
+		screen.blit(pd2, pd2Rect)
 
 
 		if ended:
@@ -942,6 +1020,7 @@ def lastman():
 			keys = pygame.key.get_pressed()
 
 			if keys[K_RETURN]:
+
 				sleep(0.5)
 				for sprite in all_sprites:
 					sprite.kill()
@@ -960,7 +1039,7 @@ def lastman():
 				winner.kill()
 				winner = None
 
-				lastman()
+				multiplayer()
 				startScreen()
 
 		# Refreshing screen
@@ -1197,7 +1276,7 @@ def startScreen():
 						pygame.mixer.music.play(-1, 0)
 
 						firstEntry = False
-						lastman()
+						multiplayer()
 
 						break
 				if y == ey:
@@ -1236,43 +1315,33 @@ def startScreen():
 		clock.tick(FPS)
 
 
-def gameOver(p1, highscore):
+def gameOver():
 
 
 	pygame.mixer.music.load('sounds/gameOver.ogg')
-
-	if highscore != None:
-		if p1.relpos.x >= highscore.x:
-			highscore.x = p1.relpos.x
-	else:
-		highscore = vec(0, 0)
 
 	pygame.mixer.music.stop()
 
 	header = pygame.font.Font('fonts/pixelart.ttf', 40)
 	sub = pygame.font.Font('fonts/pixelart.ttf', 20)
 
-	text = header.render('Game Over: ' + str(p1.relpos.x//100), BG, (255, 255, 255))
+	text = header.render('Game Over', BG, (255, 255, 255))
 	text2 = sub.render('Press anything to continue', BG, (255, 255, 255))
-	score = sub.render('Current Highscore: ' + str(highscore.x//100), BG, (255, 255, 255))
 
 	textRect = text.get_rect()
 	text2Rect = text2.get_rect()
-	scoreRect = score.get_rect()
 
 	textRect.midbottom = (width // 2, height//3)
 	text2Rect.midbottom = (width // 2, height * 3//6)
-	scoreRect.midbottom = (width // 2, height * 3//12)
 
-	screen.fill(BG)
+#	screen.fill(BG)
 
 	screen.blit(text, textRect)
-	screen.blit(score, scoreRect)
 	screen.blit(text2, text2Rect)
 
 	pygame.mixer.music.play(0, 0)
 	pygame.display.flip()
-	sleep(3)
+	sleep(8)
 
 
 	while True:
