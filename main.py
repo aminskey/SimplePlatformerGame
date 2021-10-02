@@ -42,6 +42,10 @@ seagulls = pygame.sprite.Group()
 planes = pygame.sprite.Group()
 
 
+# Joystick config and init
+p1Stick = pygame.joystick.Joystick(0)
+p1Stick.init()
+
 # text and screen background
 BG = (52, 164, 235)
 BG2 = (100, 100, 255)
@@ -196,7 +200,7 @@ class Player(pygame.sprite.Sprite):
 
 
 		# Event handling
-		if keys[K_SPACE] or mkeys[0]:
+		if keys[K_SPACE] or mkeys[0] or p1Stick.get_button(0):
 
 			# jumping
 			y -= 20
@@ -570,19 +574,14 @@ def startScreen():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
-			if event.type == KEYDOWN:
+			if event.type == KEYDOWN or event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYAXISMOTION:
 
-				if key[K_UP]:
+				if key[K_UP] or p1Stick.get_axis(0) > 0.1:
 					y -= 20
-				if key[K_DOWN]:
+				if key[K_DOWN] or p1Stick.get_axis(0) < -0.1:
 					y += 20
-				if key[K_p]:
-					pygame.mixer.quit()
-				if key[K_u]:
-					pygame.mixer.init()
 
-
-				if key[K_RETURN]:
+				if key[K_RETURN] or p1Stick.get_button(0):
 					if y == ey:
 						pygame.mixer.music.stop()
 						pygame.quit()
@@ -658,7 +657,7 @@ def gameOver(p1, highscore):
 
 	while True:
 		for event in pygame.event.get():
-			if event.type == pygame.KEYDOWN:
+			if event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
 				sleep(0.25)
 				for sprite in all_sprites:
 					sprite.kill()
