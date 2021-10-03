@@ -29,6 +29,8 @@ if pygame.joystick.get_count() > 1:
 	p2Pad = pygame.joystick.Joystick(1)
 	p2Pad.init()
 
+	p1Pad = pygame.joystick.Joystick(0)
+	p1Pad.init()
 
 # resolution tuple
 res = (width, height)
