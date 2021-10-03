@@ -43,7 +43,7 @@ planes = pygame.sprite.Group()
 
 
 # Joystick config and init
-p1Stick = pygame.joystick.Joystick(0)
+p1Stick = pygame.joystick.Joystick(-1)
 p1Stick.init()
 
 # text and screen background
