@@ -1110,7 +1110,7 @@ def helpScreen():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit(0)
-			if event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWM:
+			if event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
 				pygame.mixer.music.stop()
 				startScreen()
 
