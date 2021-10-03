@@ -26,10 +26,10 @@ p1Pad = pygame.joystick.Joystick(0)
 p1Pad.init()
 
 if pygame.joystick.get_count() > 1:
-	p2Pad = pygame.joystick.Joystick(1)
+	p2Pad = pygame.joystick.Joystick(0)
 	p2Pad.init()
 
-	p1Pad = pygame.joystick.Joystick(0)
+	p1Pad = pygame.joystick.Joystick(1)
 	p1Pad.init()
 
 # resolution tuple
@@ -1033,7 +1033,7 @@ def multiplayer():
 			screen.blit(win, winRect)
 			keys = pygame.key.get_pressed()
 
-			if keys[K_RETURN]:
+			if keys[K_RETURN] or p1Pad.get_button(1):
 
 				sleep(0.5)
 				for sprite in all_sprites:
@@ -1042,7 +1042,7 @@ def multiplayer():
 				CHANCE = 128
 				PlayerSpeed = PSD
 				startScreen()
-			if keys[K_r]:
+			if keys[K_r] or p1Pad.get_button(9):
 				sleep(0.5)
 				for sprite in all_sprites:
 					sprite.kill()
