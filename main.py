@@ -352,7 +352,7 @@ class Player2(Player):
 
 
 		# Event handling
-		if keys[K_w] or p2Pad.button(0):
+		if keys[K_w] or p2Pad.get_button(0):
 
 			# jumping
 			y -= 20
