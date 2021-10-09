@@ -22,8 +22,14 @@ width = 900
 height = 700
 
 # joystick
-p1Pad = pygame.joystick.Joystick(0)
-p1Pad.init()
+
+p1Pad = None
+p2Pad = None
+
+if pygame.joystick.get_count() > 0:
+	p1Pad = pygame.joystick.Joystick(0)
+	p1Pad.init()
+
 
 if pygame.joystick.get_count() > 1:
 	p2Pad = pygame.joystick.Joystick(0)
@@ -206,7 +212,7 @@ class Player(pygame.sprite.Sprite):
 		self.rect.center = (x, y)
 
 	# Jump mechanism
-	def jump(self):
+	def jump(self, jumpForce=20):
 
 		x, y = self.rect.center
 
@@ -217,16 +223,20 @@ class Player(pygame.sprite.Sprite):
 
 
 		# Event handling
-		if keys[K_SPACE] or mkeys[0] or p1Pad.get_button(0):
+		if keys[K_SPACE] or mkeys[0]:
 
 			# jumping
-			y -= 20
+			y -= jumpForce
+		if p1Pad != None:
+			if p1Pad.get_button(0):
+				y -= jumpForce
+
 
 		# Updating position
 		self.rect.center = (x, y)
 
 	# Gravity mechanism
-	def gravity(self):
+	def gravity(self, gravityDecimal=0.5):
 
 		x, y = self.rect.center
 
@@ -234,7 +244,7 @@ class Player(pygame.sprite.Sprite):
 		# If not then continue falling and updating position
 		if not pygame.sprite.spritecollide(self, platforms, False):
 			y += self.acc
-			self.acc += 0.5
+			self.acc += gravityDecimal
 
 			self.rect.center = (x, y)
 		# else stop and update position
@@ -245,7 +255,7 @@ class Player(pygame.sprite.Sprite):
 
 
 	# The Update mechanism
-	def update(self):
+	def update(self, jumpForce=20, gravity=0.5):
 
 		x, y = self.rect.midtop
 
@@ -293,10 +303,10 @@ class Player(pygame.sprite.Sprite):
 
 		# If not in air allow jump mechanism
 		if self.jumpstate:
-			self.jump()
+			self.jump(jumpForce)
 
 		# Running virtual gravity method
-		self.gravity()
+		self.gravity(gravity)
 
 class Boss(pygame.sprite.Sprite):
 	def __init__(self):
@@ -343,7 +353,7 @@ class Player2(Player):
 
 		self.name = name
 
-	def jump(self):
+	def jump(self, jumpForce=20):
 		x, y = self.rect.center
 
 
@@ -352,10 +362,14 @@ class Player2(Player):
 
 
 		# Event handling
-		if keys[K_w] or p2Pad.get_button(0):
+		if keys[K_w]:
 
 			# jumping
-			y -= 20
+			y -= jumpForce
+		elif p2Pad != None:
+			if p2Pad.get_button(0):
+				y -= jumpForce
+
 
 		# Updating position
 		self.rect.center = (x, y)
@@ -388,6 +402,36 @@ class PlayerTag(pygame.sprite.Sprite):
 
 	def update(self):
 		self.rect.midbottom = self.player.rect.midtop
+
+# Levels Class
+class Level():
+	def __init__(self, bg, spriteDirs, song, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20):
+		self.bg = "backgrounds/" + bg
+		self.bgSong = song
+
+		self.platDir, self.cloud = spriteDirs
+
+		self.jumpForce = jumpForce
+		self.gravity = gravity
+
+		self.psd = playerStartSpeed
+		self.moveBool = moveBool
+
+	def loadBG(self, surf=screen):
+		self.image = pygame.image.load(self.bg)
+		self.image = pygame.transform.scale(self.image, surf.get_size())
+
+		self.rect = self.image.get_rect()
+		self.rect.topleft = (0, 0)
+
+
+
+levels = [
+	Level("station.png", ("space", None), "songs/extsong.ogg", 3, False, 0.15, 10),
+	Level("bg3.png", ("ground", "cloud.png"), "songs/song-4.ogg", 6),
+	Level("bg2.png", ("neon", None), "songs/song-5.ogg", 5),
+	Level("neon-landscape.png", ("neon", None), "songs/neon-run.ogg")
+]
 
 def bossFight():
 	boss = pygame.sprite.Group()
@@ -439,35 +483,26 @@ def bossFight():
 		clock.tick(FPS)
 
 
-def main():
+def main(tmpLvl):
 
-	bg = pygame.image.load("backgrounds/bg" + str(random.randint(1,5)) + ".png")
-
-	bg = pygame.transform.scale(bg, res)
-	bgRect = bg.get_rect()
-
-	bgRect = (0, 0)
-
-	random.seed(datetime.now())
-
-	# choosing random background song.
-	pygame.mixer.music.load('songs/song-' + str(random.randint(0, 5)) +'.ogg')
-	sleep(0.5)
-	for i in range(8):
-		random.seed(datetime.now())
-		pygame.mixer.music.queue('songs/song-' + str(random.randint(0, 5)) +'.ogg')
+	tmpLvl.loadBG()
 
 	# Creating background clouds
-	for i in range(20):
-		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
+	if tmpLvl.cloud != None:
+		for i in range(20):
+			new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)), "backgroundObjects/" + tmpLvl.cloud)
 
-		if not pygame.sprite.spritecollide(new_cloud, clouds, False):
-			clouds.add(new_cloud)
-			all_sprites.add(new_cloud)
+			if not pygame.sprite.spritecollide(new_cloud, clouds, False):
+				clouds.add(new_cloud)
+				all_sprites.add(new_cloud)
+
+	pygame.mixer.music.load(tmpLvl.bgSong)
 
 	# Importing global variables
 	global PlayerSpeed
 	global CHANCE
+
+	PlayerSpeed = tmpLvl.psd
 
 	# defining player
 	p1 = Player()
@@ -475,15 +510,15 @@ def main():
 	players.add(p1)
 
 	# Defining ground platform
-	plat1 = Platform(True, 'platforms/ground/platform_5.png')
+	plat1 = Platform(True, "platforms/" + tmpLvl.platDir + '/platform_5.png')
 
 	# Customizing platform
 	plat1.image = pygame.transform.scale(plat1.image, (plat1.image.get_width()*3, plat1.image.get_height()*3))
 	plat1.rect = plat1.image.get_rect()
-	plat1.rect.topleft = (0, height * 5//6 + 3)
+	plat1.rect.topleft = (50, height * 5//6 + 3)
 
 
-	plat2 = Platform(True, 'platforms/ground/platform_0.png')
+	plat2 = Platform(True, "platforms/" + tmpLvl.platDir + '/platform_0.png')
 
 	plat2.rect.center = (width * 1.25, height * 4//6)
 
@@ -495,7 +530,7 @@ def main():
 	all_sprites.add(plat2)
 
 	# loop the background music
-	pygame.mixer.music.play(0, 0)
+	pygame.mixer.music.play(-1, 0)
 
 
 	# Creating font object
@@ -557,10 +592,10 @@ def main():
 			choice = random.randint(0, CHANCE)
 
 			if choice == 0:
-				new_plat = Platform(False)
+				new_plat = Platform(False, None, tmpLvl.platDir)
 				danger.add(new_plat)
 			else :
-				new_plat = Platform(True)
+				new_plat = Platform(True, None, tmpLvl.platDir)
 
 
 			# if platforms overlap
@@ -574,7 +609,7 @@ def main():
 		# checking if the player died
 		# If it happened then reset settings and run gameOver method
 		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False) or x < 0:
-			PlayerSpeed = PSD
+			PlayerSpeed = tmpLvl.psd
 			CHANCE = 128
 			gameOver()
 
@@ -594,7 +629,7 @@ def main():
 			# If true then spawn
 			if choice == 0:
 				for i in range(random.randrange(0, 3)):
-					new_seagull = Seagull()
+					new_seagull = Seagull(tmpLvl.platDir)
 
 					if not pygame.sprite.spritecollide(new_seagull, seagulls, False):
 						seagulls.add(new_seagull)
@@ -614,9 +649,9 @@ def main():
 		# Updating sprite groups
 		clouds.update()
 		seagulls.update()
-		p1.update()
+		p1.update(tmpLvl.jumpForce, tmpLvl.gravity)
 
-		screen.blit(bg, bgRect)
+		screen.blit(tmpLvl.image, tmpLvl.rect)
 
 		# Drawing all sprites to screen
 		all_sprites.draw(screen)
@@ -750,9 +785,6 @@ def jumpGame():
 		clock.tick(FPS)
 
 def multiplayer():
-
-	if pygame.joystick.get_count() < 2:
-		startScreen()
 
 	aliens = pygame.sprite.Group()
 
@@ -900,21 +932,6 @@ def multiplayer():
 
 		# Put in for loop for user to increase game intensity
 		for i in range(1):
-			# randomizing chance
-		#	random.seed(datetime.now())
-
-		#	choice = random.randint(0, CHANCE)
-
-			'''
-			if choice == 0:
-				new_plat = Platform(False, None, "space", sc1)
-
-				new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
-
-				danger.add(new_plat)
-			else :
-			'''
-
 			new_plat = Platform(True, None, "space", sc1)
 
 			new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
@@ -1033,28 +1050,32 @@ def multiplayer():
 			screen.blit(win, winRect)
 			keys = pygame.key.get_pressed()
 
-			if keys[K_RETURN] or p1Pad.get_button(1):
+			if p1Pad != None or p2Pad != None:
+				if p1Pad.get_button(1):
+					sleep(0.5)
+					for sprite in all_sprites:
+						sprite.kill()
 
-				sleep(0.5)
-				for sprite in all_sprites:
-					sprite.kill()
+					CHANCE = 128
+					PlayerSpeed = PSD
+					startScreen()
 
-				CHANCE = 128
-				PlayerSpeed = PSD
-				startScreen()
-			if keys[K_r] or p1Pad.get_button(9):
-				sleep(0.5)
-				for sprite in all_sprites:
-					sprite.kill()
+				if p1Pad.get_button(9):
+					sleep(0.5)
+					for sprite in all_sprites:
+						sprite.kill()
 
-				CHANCE = 128
-				PlayerSpeed = PSD
+					CHANCE = 128
+					PlayerSpeed = PSD
 
-				winner.kill()
-				winner = None
+					winner.kill()
+					winner = None
 
-				multiplayer()
-				startScreen()
+					multiplayer()
+					startScreen()
+
+
+
 
 		# Refreshing screen
 		pygame.display.update()
@@ -1095,7 +1116,7 @@ def helpScreen():
 
 	titleRect = (width * 1//32, height* 1//16)
 
-	bg = pygame.image.load("backgrounds/bg1.png")
+	bg = pygame.image.load("backgrounds/help.png")
 	bg = pygame.transform.scale(bg, res)
 
 	bgRect = bg.get_rect()
@@ -1258,17 +1279,19 @@ def startScreen():
 				sys.exit()
 			if event.type == KEYDOWN or event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYAXISMOTION:
 
-				if key[K_UP] or p1Pad.get_axis(0) > 0.1:
+				if key[K_UP]:
 					y -= 20
-				if key[K_DOWN] or p1Pad.get_axis(0) < -0.1:
+				if key[K_DOWN]:
 					y += 20
 				if key[K_p]:
 					pygame.mixer.quit()
 				if key[K_u]:
 					pygame.mixer.init()
 
+				kstate = key[-1]
 
-				if key[K_SPACE] or key[K_RETURN] or p1Pad.get_button(0):
+
+				if key[K_RETURN] or key[K_SPACE]:
 					if y == ey:
 						pygame.mixer.music.stop()
 						pygame.quit()
@@ -1281,7 +1304,7 @@ def startScreen():
 					elif y == sy:
 						pygame.mixer.music.stop()
 						firstEntry = False
-						main()
+						main(levels[random.randint(0, len(levels))])
 						break
 					elif y == my:
 						pygame.mixer.music.stop()
