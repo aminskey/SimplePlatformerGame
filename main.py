@@ -81,7 +81,7 @@ FPS = 110
 vec = pygame.math.Vector2
 
 # debug value
-debug = True
+debug = False
 
 # for startscreen
 Exit = False
@@ -427,10 +427,11 @@ class Level():
 
 
 levels = [
-	Level("station.png", ("space", None), "songs/extsong.ogg", 3, False, 0.15, 10),
+	Level("station.png", ("space", None), "songs/neon-run.ogg", 3, False, 0.15, 10),
 	Level("bg3.png", ("ground", "cloud.png"), "songs/song-4.ogg", 6),
-	Level("bg2.png", ("neon", None), "songs/song-5.ogg", 5),
-	Level("neon-landscape.png", ("neon", None), "songs/neon-run.ogg")
+	Level("bg2.png", ("neon", None), "songs/extsong.ogg", 5),
+	Level("neon-landscape.png", ("neon", None), "songs/neon-scape.ogg", 4),
+	Level("volcano-dash.png", ("ground", "cloud.png"), "songs/song-5.ogg", 5)
 ]
 
 def bossFight():
@@ -553,7 +554,7 @@ def main(tmpLvl):
 
 
 		# HUD Player text
-		score1 = sub.render('Player Score', BG2, (55, 255, 55))
+		score1 = sub.render('Player Distance', BG2, (55, 255, 55))
 		score2 = sub.render(str(p1.relpos.x//100), BG2, (55, 255, 55))
 
 		# text rectangle
@@ -1191,7 +1192,7 @@ def startScreen():
 	bg = pygame.image.load("backgrounds/startbg.png")
 	bg = pygame.transform.scale(bg, res)
 
-	pygame.mixer.music.load('songs/startup.ogg')
+	pygame.mixer.music.load('songs/song-0.ogg')
 
 	alphaVal = 0
 
@@ -1304,7 +1305,7 @@ def startScreen():
 					elif y == sy:
 						pygame.mixer.music.stop()
 						firstEntry = False
-						main(levels[random.randint(0, len(levels))])
+						main(levels[random.randint(-len(levels)+1, len(levels)-1)])
 						break
 					elif y == my:
 						pygame.mixer.music.stop()
