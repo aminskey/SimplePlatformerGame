@@ -455,7 +455,7 @@ class CoopLevel():
 
 levels = [
 	Level("earth.png", ("space", None), "neon-run.ogg", 3, False, 0.15, 10),
-	Level("Landscape.png", ("ground", "cloud.png"), "song-4.ogg", 6),
+	Level("Landscape.png", ("ground", None), "song-4.ogg", 6),
 	Level("neon-city.png", ("neon", None), "extsong.ogg", 5),
 	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", 4),
 	Level("volcano-dash.png", ("ground", "cloud.png"), "song-5.ogg", 5)
