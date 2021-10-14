@@ -50,6 +50,7 @@ name = 'Sky Dash Battle'
 screen = pygame.display.set_mode(res)
 pygame.display.set_caption(name)
 
+
 # Sprite Groups
 clouds = pygame.sprite.Group()
 platforms = pygame.sprite.Group()
@@ -81,7 +82,7 @@ FPS = 110
 vec = pygame.math.Vector2
 
 # debug value
-debug = False
+debug = True
 
 # for startscreen
 Exit = False
@@ -423,15 +424,47 @@ class Level():
 
 		self.rect = self.image.get_rect()
 		self.rect.topleft = (0, 0)
+class CoopLevel():
+	def __init__(self, backgrounds, spriteDir, song, gravity=0.5, jumpForce=20, PlayerStartSpeed=PSD, moveBool=False):
+		self.bg1, self.bg2 = backgrounds
+		self.bgSong = song
+
+		self.bg1 = "backgrounds/dual-BGs/" + self.bg1
+		self.bg2 = "backgrounds/dual-BGs/" + self.bg2
 
 
+		self.platDir = spriteDir
+		self.psd = PlayerStartSpeed
+
+		self.moveBool = moveBool
+
+		self.gravity = gravity
+		self.jumpForce = jumpForce
+
+	def loadBG(self, size1, size2):
+		self.image1 = pygame.image.load(self.bg1)
+		self.image1 = pygame.transform.scale(self.image1, size1)
+
+		self.image2 = pygame.image.load(self.bg2)
+		self.image2 = pygame.transform.scale(self.image2, size2)
+
+		self.rect1 = self.image1.get_rect()
+		self.rect2 = self.image2.get_rect()
+
+		self.rect1.topleft = self.rect2.topleft = (0, 0)
 
 levels = [
-	Level("station.png", ("space", None), "songs/neon-run.ogg", 3, False, 0.15, 10),
-	Level("bg3.png", ("ground", "cloud.png"), "songs/song-4.ogg", 6),
-	Level("bg2.png", ("neon", None), "songs/extsong.ogg", 5),
-	Level("neon-landscape.png", ("neon", None), "songs/neon-scape.ogg", 4),
-	Level("volcano-dash.png", ("ground", "cloud.png"), "songs/song-5.ogg", 5)
+	Level("earth.png", ("space", None), "neon-run.ogg", 3, False, 0.15, 10),
+	Level("Landscape.png", ("ground", "cloud.png"), "song-4.ogg", 6),
+	Level("neon-city.png", ("neon", None), "extsong.ogg", 5),
+	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", 4),
+	Level("volcano-dash.png", ("ground", "cloud.png"), "song-5.ogg", 5)
+]
+
+multiplayerLevels = [
+	CoopLevel(("earthdual1.png", "earthdual2.png"), "space", "dual-BGMs/dual.ogg", 0.15, 10),
+	CoopLevel(("neon-dual1.png", "neon-dual2.png"), "neon", "dual-BGMs/neon-dual.ogg", 0.5, 20),
+	CoopLevel(("mars-dual1.png", "mars-dual2.png"), "space", "dual-BGMs/mars-dual.ogg", 0.15, 10)
 ]
 
 def bossFight():
@@ -497,7 +530,7 @@ def main(tmpLvl):
 				clouds.add(new_cloud)
 				all_sprites.add(new_cloud)
 
-	pygame.mixer.music.load(tmpLvl.bgSong)
+	pygame.mixer.music.load("songs/" + tmpLvl.bgSong)
 
 	# Importing global variables
 	global PlayerSpeed
@@ -785,20 +818,11 @@ def jumpGame():
 		pygame.display.update()
 		clock.tick(FPS)
 
-def multiplayer():
+def multiplayer(tmplvl):
 
 	aliens = pygame.sprite.Group()
 
 	numberGroup = pygame.sprite.Group()
-
-
-	bg = pygame.image.load("backgrounds/dualbg.png")
-
-	bg = pygame.transform.scale(bg, res)
-
-	bgRect = bg.get_rect()
-
-	bgRect.topleft = (0, 0)
 
 	random.seed(datetime.now())
 
@@ -828,12 +852,8 @@ def multiplayer():
 	sc1Rect.topleft = (0, 0)
 	sc2Rect.topleft = (0, height/2)
 
-	# Screen 2 background
-	bg2 = pygame.image.load("backgrounds/dualbg2.png")
-	bg2 = pygame.transform.scale(bg2, (sc1.get_width(), sc1.get_height()))
 
-	bg2Rect = bg2.get_rect()
-	bg2Rect.topleft = (0, 0)
+	tmplvl.loadBG(screen.get_size(), sc1.get_size())
 
 	# defining player
 	p1 = Player()
@@ -851,13 +871,13 @@ def multiplayer():
 	numberGroup.add(p2Tag)
 
 	# Defining ground platform
-	plat1 = Platform(True, 'platforms/space/platform_5.png', None, sc1)
+	plat1 = Platform(True, 'platforms/' + tmplvl.platDir + '/platform_5.png', None, sc1)
 
 	# Customizing platform
 	plat1.rect.topleft = (sc1.get_width() * 0.5, sc1.get_height() * 5//6 + 3)
 
 
-	plat2 = Platform(True, 'platforms/space/platform_0.png', None, sc1)
+	plat2 = Platform(True, 'platforms/' + tmplvl.platDir + '/platform_0.png', None, sc1)
 
 	plat2.image = pygame.transform.scale(plat2.image, (plat2.image.get_width() * 2//3, plat2.image.get_width() * 2//3))
 
@@ -933,7 +953,7 @@ def multiplayer():
 
 		# Put in for loop for user to increase game intensity
 		for i in range(1):
-			new_plat = Platform(True, None, "space", sc1)
+			new_plat = Platform(True, None, tmplvl.platDir, sc1)
 
 			new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
 
@@ -987,7 +1007,10 @@ def multiplayer():
 		# In this case it's only used to increment the speed since this is a race.
 
 		if counter > 9000 and counter % (20 * 100) == 0 and counter != 0:
-			alien = Seagull("space", sc1)
+			alien = Seagull(tmplvl.platDir, sc1)
+
+			x, y = alien.rect.center
+			alien.rect.center = (x, random.randint(sc1.get_height() * 1//3, sc1.get_height() * 5//6))
 
 			if pygame.sprite.spritecollide(alien, aliens, False):
 				alien.kill()
@@ -1003,15 +1026,15 @@ def multiplayer():
 		# 1/chancenumber divided by 105/100
 			CHANCE //=1.05
 
-		players.update()
+		players.update(tmplvl.jumpForce, tmplvl.gravity)
 		numberGroup.update()
 
 		aliens.update()
 
 
 
-		sc1.blit(bg, bgRect)
-		sc2.blit(bg2, bg2Rect)
+		sc1.blit(tmplvl.image1, tmplvl.rect1)
+		sc2.blit(tmplvl.image2, tmplvl.rect2)
 
 		sc1.blit(p1.image, p1.rect)
 		sc1.blit(p1Tag.image, p1Tag.rect)
@@ -1051,6 +1074,28 @@ def multiplayer():
 			screen.blit(win, winRect)
 			keys = pygame.key.get_pressed()
 
+			if keys[K_RETURN]:
+				sleep(0.5)
+				for sprite in all_sprites:
+					sprite.kill()
+
+				CHANCE = 128
+				PlayerSpeed = PSD
+				startScreen()
+
+			if keys[K_r]:
+				sleep(0.5)
+				for sprite in all_sprites:
+					sprite.kill()
+
+				CHANCE = 128
+				PlayerSpeed = PSD
+
+				winner.kill()
+				winner = None
+
+				multiplayer(tmplvl)
+				startScreen()
 			if p1Pad != None or p2Pad != None:
 				if p1Pad.get_button(1):
 					sleep(0.5)
@@ -1072,7 +1117,7 @@ def multiplayer():
 					winner.kill()
 					winner = None
 
-					multiplayer()
+					multiplayer(tmplvl)
 					startScreen()
 
 
@@ -1192,7 +1237,7 @@ def startScreen():
 	bg = pygame.image.load("backgrounds/startbg.png")
 	bg = pygame.transform.scale(bg, res)
 
-	pygame.mixer.music.load('songs/song-0.ogg')
+	pygame.mixer.music.load('songs/startups/startup-1.ogg')
 
 	alphaVal = 0
 
@@ -1270,7 +1315,21 @@ def startScreen():
 
 	bg.set_alpha(255)
 
+	bg = pygame.image.load("backgrounds/startbg2.png")
+	bg = pygame.transform.scale(bg, res)
+
+	bgRect = bg.get_rect()
+	bgRect.topleft = (0, 0)
+
+	pygame.mixer.music.stop()
+	pygame.mixer.music.unload()
+	pygame.mixer.music.load("songs/startups/startup-2.ogg")
+
 	titleRect.center = (width/2, height * 1//3)
+
+	pygame.mixer.music.play(-1, 0)
+
+	multiLevel = multiplayerLevels[random.randint(0, len(multiplayerLevels)-1)]
 
 	while True:
 		for event in pygame.event.get():
@@ -1309,12 +1368,12 @@ def startScreen():
 						break
 					elif y == my:
 						pygame.mixer.music.stop()
-						pygame.mixer.music.load("songs/dual.ogg")
+						pygame.mixer.music.load("songs/" + multiLevel.bgSong)
 
 						pygame.mixer.music.play(-1, 0)
 
 						firstEntry = False
-						multiplayer()
+						multiplayer(multiLevel)
 
 						break
 				if y == ey:
