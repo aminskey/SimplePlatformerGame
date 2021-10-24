@@ -23,6 +23,9 @@ height = 700
 
 # joystick
 
+gameIcon = pygame.image.load("icons/gameIcon.png")
+pygame.display.set_icon(gameIcon)
+
 p1Pad = None
 p2Pad = None
 
@@ -407,7 +410,12 @@ class PlayerTag(pygame.sprite.Sprite):
 # Levels Class
 class Level():
 	def __init__(self, bg, spriteDirs, song, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20):
-		self.bg = "backgrounds/" + bg
+
+		self.bg = bg
+
+		if self.bg != None:
+			self.bg = "backgrounds/" + bg
+
 		self.bgSong = song
 
 		self.platDir, self.cloud = spriteDirs
@@ -455,16 +463,18 @@ class CoopLevel():
 
 levels = [
 	Level("earth.png", ("space", None), "neon-run.ogg", 3, False, 0.15, 10),
-	Level("Landscape.png", ("ground", None), "song-4.ogg", 6),
+	Level(None, ("ground", "cloud.png"), "free-again.ogg", 3),
 	Level("neon-city.png", ("neon", None), "extsong.ogg", 5),
-	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", 4),
-	Level("volcano-dash.png", ("ground", "cloud.png"), "song-5.ogg", 5)
+	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", 5),
+	Level("volcano-dash.png", ("ground", "cloud.png"), "lava-run.ogg", 5)
 ]
 
 multiplayerLevels = [
 	CoopLevel(("earthdual1.png", "earthdual2.png"), "space", "dual-BGMs/dual.ogg", 0.15, 10),
 	CoopLevel(("neon-dual1.png", "neon-dual2.png"), "neon", "dual-BGMs/neon-dual.ogg", 0.5, 20),
-	CoopLevel(("mars-dual1.png", "mars-dual2.png"), "space", "dual-BGMs/mars-dual.ogg", 0.15, 10)
+	CoopLevel(("mars-dual1.png", "mars-dual2.png"), "space", "dual-BGMs/mars-dual.ogg", 0.15, 10),
+	CoopLevel(("super-dual1.png", "super-dual2.png"), "neon", "dual-BGMs/super-dual.ogg", 0.5, 20),
+	CoopLevel(("nebula-dual1.png", "nebula-dual2.png"), "neon", "dual-BGMs/nebula-dual.ogg", 0.6, 20)
 ]
 
 def bossFight():
@@ -519,7 +529,8 @@ def bossFight():
 
 def main(tmpLvl):
 
-	tmpLvl.loadBG()
+	if tmpLvl.bg != None:
+		tmpLvl.loadBG()
 
 	# Creating background clouds
 	if tmpLvl.cloud != None:
@@ -588,7 +599,7 @@ def main(tmpLvl):
 
 		# HUD Player text
 		score1 = sub.render('Player Distance', BG2, (55, 255, 55))
-		score2 = sub.render(str(p1.relpos.x//100), BG2, (55, 255, 55))
+		score2 = sub.render(str(p1.relpos.x//FPS), BG2, (55, 255, 55))
 
 		# text rectangle
 		score1Rect = score1.get_rect()
@@ -685,7 +696,10 @@ def main(tmpLvl):
 		seagulls.update()
 		p1.update(tmpLvl.jumpForce, tmpLvl.gravity)
 
-		screen.blit(tmpLvl.image, tmpLvl.rect)
+		if tmpLvl.bg != None:
+			screen.blit(tmpLvl.image, tmpLvl.rect)
+		else:
+			screen.fill((55, 55, 155))
 
 		# Drawing all sprites to screen
 		all_sprites.draw(screen)
@@ -909,7 +923,7 @@ def multiplayer(tmplvl):
 		ps2 = sub.render(str(PlayerSpeed), BG2, (55, 55, 255))
 
 		pd1 = sub.render('Player Distance:', BG2, (55, 255, 55))
-		pd2 = sub.render(str(counter//100), BG2, (55, 55, 255))
+		pd2 = sub.render(str(counter//FPS), BG2, (55, 55, 255))
 
 		# Win dialog
 		win = header.render('You Win', BG2, (55, 55, 255))
@@ -970,7 +984,7 @@ def multiplayer(tmplvl):
 				new_plat.kill()
 
 
-		if not ended:
+		if not ended and counter//FPS > 0:
 			for i in range(0, 2):
 				x, y = players.sprites()[i].rect.center
 				if y > sc1.get_height() * 2 or pygame.sprite.spritecollide(players.sprites()[i], danger, False) or x < 0:
@@ -1075,6 +1089,7 @@ def multiplayer(tmplvl):
 			keys = pygame.key.get_pressed()
 
 			if keys[K_RETURN]:
+				ended = False
 				sleep(0.5)
 				for sprite in all_sprites:
 					sprite.kill()
@@ -1083,7 +1098,11 @@ def multiplayer(tmplvl):
 				PlayerSpeed = PSD
 				startScreen()
 
+				winner.kill()
+				winner = None
+
 			if keys[K_r]:
+				ended = False
 				sleep(0.5)
 				for sprite in all_sprites:
 					sprite.kill()
@@ -1098,6 +1117,7 @@ def multiplayer(tmplvl):
 				startScreen()
 			if p1Pad != None or p2Pad != None:
 				if p1Pad.get_button(1):
+					ended = False
 					sleep(0.5)
 					for sprite in all_sprites:
 						sprite.kill()
@@ -1106,7 +1126,11 @@ def multiplayer(tmplvl):
 					PlayerSpeed = PSD
 					startScreen()
 
+					winner.kill()
+					winner = None
+
 				if p1Pad.get_button(9):
+					ended = False
 					sleep(0.5)
 					for sprite in all_sprites:
 						sprite.kill()
@@ -1321,13 +1345,7 @@ def startScreen():
 	bgRect = bg.get_rect()
 	bgRect.topleft = (0, 0)
 
-	pygame.mixer.music.stop()
-	pygame.mixer.music.unload()
-	pygame.mixer.music.load("songs/startups/startup-2.ogg")
-
 	titleRect.center = (width/2, height * 1//3)
-
-	pygame.mixer.music.play(-1, 0)
 
 	multiLevel = multiplayerLevels[random.randint(0, len(multiplayerLevels)-1)]
 
@@ -1364,7 +1382,7 @@ def startScreen():
 					elif y == sy:
 						pygame.mixer.music.stop()
 						firstEntry = False
-						main(levels[random.randint(-len(levels)+1, len(levels)-1)])
+						main(levels[random.randint(0, len(levels)-1)])
 						break
 					elif y == my:
 						pygame.mixer.music.stop()
