@@ -6,6 +6,8 @@ from pygame.locals import *
 from datetime import datetime
 from time import sleep, time
 from warnings import filterwarnings
+from os import listdir
+from os.path import isdir
 
 # filter warning
 filterwarnings('ignore', category=DeprecationWarning)
@@ -61,7 +63,7 @@ all_sprites = pygame.sprite.Group()
 danger = pygame.sprite.Group()
 players = pygame.sprite.Group()
 seagulls = pygame.sprite.Group()
-
+decorations = pygame.sprite.Group()
 
 # text and screen background
 BG = (52, 164, 235)
@@ -79,7 +81,7 @@ PlayerSpeed = PSD
 CHANCE = 256
 # 1/256 = 0.25% chance of lava block
 
-FPS = 110
+FPS = 60
 
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
@@ -128,10 +130,24 @@ class Platform(pygame.sprite.Sprite):
 		# if there is no specific image then use random
 		# if not landable then use lava block image.
 		if image == None:
+			plat_dir = listdir('platforms/' + dir)
+			bad_dir = listdir('badObjects/' + dir)
+
+			plat_max_len = len(plat_dir) - 1
+			bad_max_len = len(bad_dir) - 1
+
+			for item in plat_dir:
+				if isdir(item):
+					plat_max_len -= 1
+
+			for item in bad_dir:
+				if isdir(item):
+					bad_max_len -= 1
+
 			if Landable:
-				self.image = pygame.image.load('platforms/'+ dir +'/platform_' + str(random.randint(0, 5)) + '.png')
+				self.image = pygame.image.load('platforms/'+ dir +'/platform_' + str(random.randint(0, plat_max_len)) + '.png')
 			else:
-				self.image = pygame.image.load('badObjects/'+ dir +'/badplat' + str(random.randint(0,2))+'.png')
+				self.image = pygame.image.load('badObjects/'+ dir +'/badplat' + str(random.randint(0, bad_max_len-1)) + '.png')
 		else:
 			self.image = pygame.image.load(image)
 
@@ -141,8 +157,7 @@ class Platform(pygame.sprite.Sprite):
 		# General settings
 		self.rect = self.image.get_rect()
 		self.rect.center = (random.randrange(width * 1.25, width * 2), random.randrange(height * 8//12, height * 5//6))
-		self.pos = vec((self.rect.center))
-
+		# self.pos = vec((self.rect.center))
 # Seagulls class
 class Seagull(pygame.sprite.Sprite):
 	# initial settings
@@ -152,7 +167,7 @@ class Seagull(pygame.sprite.Sprite):
 		width, height = surface.get_size()
 
 		if image == None:
-			self.image = pygame.image.load('badObjects/'+dir+'/seagull.png')
+			self.image = pygame.image.load('badObjects/'+dir+'/air/seagull.png')
 		else:
 			self.image = pygame.image.load(image)
 
@@ -312,6 +327,37 @@ class Player(pygame.sprite.Sprite):
 		# Running virtual gravity method
 		self.gravity(gravity)
 
+
+class PlatDecorations(pygame.sprite.Sprite):
+	def __init__(self, platform, image=None, dir="ground", surface=screen, sizeFactor=1):
+		super().__init__()
+
+		if image != None:
+			self.image = pygame.image.load(image)
+		else:
+			decor_max_len = len(listdir('decorations/' + dir)) - 1
+			self.image = pygame.image.load('decorations/' + dir + '/decor_' + str(random.randint(0, decor_max_len)) + '.png')
+
+		if sizeFactor != 1:
+			self.image = pygame.transform.scale(self.image, (self.image.get_width()//sizeFactor, self.image.get_height()//sizeFactor))
+
+		if platform == None:
+			print("Cannot summon decoration, specified platform is None")
+			sys.exit()
+
+		self.rect = self.image.get_rect()
+		self.platform = platform
+
+		self.surface = surface
+
+		self.image.set_alpha(200)
+
+	def update(self):
+		self.rect.midbottom = self.platform.rect.midtop
+		x, y = self.rect.midbottom
+
+		self.rect.midbottom = (x, y + self.image.get_height() * 1//6)
+
 class Boss(pygame.sprite.Sprite):
 	def __init__(self):
 		super().__init__()
@@ -409,9 +455,10 @@ class PlayerTag(pygame.sprite.Sprite):
 
 # Levels Class
 class Level():
-	def __init__(self, bg, spriteDirs, song, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20):
+	def __init__(self, bg, spriteDirs, song, startblock, factor=1, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20):
 
 		self.bg = bg
+		self.factor=factor
 
 		if self.bg != None:
 			self.bg = "backgrounds/" + bg
@@ -425,6 +472,7 @@ class Level():
 
 		self.psd = playerStartSpeed
 		self.moveBool = moveBool
+		self.startblock = startblock
 
 	def loadBG(self, surf=screen):
 		self.image = pygame.image.load(self.bg)
@@ -433,13 +481,17 @@ class Level():
 		self.rect = self.image.get_rect()
 		self.rect.topleft = (0, 0)
 class CoopLevel():
-	def __init__(self, backgrounds, spriteDir, song, gravity=0.5, jumpForce=20, PlayerStartSpeed=PSD, moveBool=False):
+	def __init__(self, backgrounds, spriteDir, startblock, song, factor=1, gravity=0.5, jumpForce=20, PlayerStartSpeed=PSD, moveBool=False):
 		self.bg1, self.bg2 = backgrounds
 		self.bgSong = song
 
 		self.bg1 = "backgrounds/dual-BGs/" + self.bg1
 		self.bg2 = "backgrounds/dual-BGs/" + self.bg2
 
+		self.startblock = startblock
+
+
+		self.factor = factor
 
 		self.platDir = spriteDir
 		self.psd = PlayerStartSpeed
@@ -462,19 +514,19 @@ class CoopLevel():
 		self.rect1.topleft = self.rect2.topleft = (0, 0)
 
 levels = [
-	Level("earth.png", ("space", None), "neon-run.ogg", 3, False, 0.15, 10),
-	Level(None, ("ground", "cloud.png"), "free-again.ogg", 3),
-	Level("neon-city.png", ("neon", None), "extsong.ogg", 5),
-	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", 5),
-	Level("volcano-dash.png", ("ground", "cloud.png"), "lava-run.ogg", 5)
+	Level("earth.png", ("space", None), "neon-run.ogg",  "platform_5.png", 10, 5, False, 0.15, 10),
+	Level(None, ("ground", "cloud.png"), "free-again.ogg", "platform_5.png", 10, 5, False, 1, 30),
+	Level("neon-city.png", ("neon", None), "extsong.ogg", "platform_4.png", 10, 7, False, 1, 30),
+	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", "platform_4.png", 7, 5, False, 1, 30),
+	Level("volcano-dash.png", ("ground", "cloud.png"), "lava-run.ogg", "platform_5.png", 11, 5, False, 1, 30)
 ]
 
 multiplayerLevels = [
-	CoopLevel(("earthdual1.png", "earthdual2.png"), "space", "dual-BGMs/dual.ogg", 0.15, 10),
-	CoopLevel(("neon-dual1.png", "neon-dual2.png"), "neon", "dual-BGMs/neon-dual.ogg", 0.5, 20),
-	CoopLevel(("mars-dual1.png", "mars-dual2.png"), "space", "dual-BGMs/mars-dual.ogg", 0.15, 10),
-	CoopLevel(("super-dual1.png", "super-dual2.png"), "neon", "dual-BGMs/super-dual.ogg", 0.5, 20),
-	CoopLevel(("nebula-dual1.png", "nebula-dual2.png"), "neon", "dual-BGMs/nebula-dual.ogg", 0.6, 20)
+	CoopLevel(("earthdual1.png", "earthdual2.png"), "space", "platform_5.png", "dual-BGMs/dual.ogg", 10, 0.3, 15),
+	CoopLevel(("neon-dual1.png", "neon-dual2.png"), "neon", "platform_4.png", "dual-BGMs/neon-dual.ogg", 10, 1, 30),
+	CoopLevel(("mars-dual1.png", "mars-dual2.png"), "space", "platform_5.png", "dual-BGMs/mars-dual.ogg", 10, 0.3, 15),
+	CoopLevel(("super-dual1.png", "super-dual2.png"), "neon", "platform_4.png", "dual-BGMs/super-dual.ogg", 10, 1, 30),
+	CoopLevel(("nebula-dual1.png", "nebula-dual2.png"), "neon", "platform_4.png", "dual-BGMs/nebula-dual.ogg", 10, 1, 30)
 ]
 
 def bossFight():
@@ -539,7 +591,6 @@ def main(tmpLvl):
 
 			if not pygame.sprite.spritecollide(new_cloud, clouds, False):
 				clouds.add(new_cloud)
-				all_sprites.add(new_cloud)
 
 	pygame.mixer.music.load("songs/" + tmpLvl.bgSong)
 
@@ -555,7 +606,7 @@ def main(tmpLvl):
 	players.add(p1)
 
 	# Defining ground platform
-	plat1 = Platform(True, "platforms/" + tmpLvl.platDir + '/platform_5.png')
+	plat1 = Platform(True, "platforms/" + tmpLvl.platDir + '/' + tmpLvl.startblock)
 
 	# Customizing platform
 	plat1.image = pygame.transform.scale(plat1.image, (plat1.image.get_width()*3, plat1.image.get_height()*3))
@@ -577,6 +628,8 @@ def main(tmpLvl):
 	# loop the background music
 	pygame.mixer.music.play(-1, 0)
 
+	platnum = 0
+	decor_plat = None
 
 	# Creating font object
 	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
@@ -640,8 +693,9 @@ def main(tmpLvl):
 				new_plat = Platform(False, None, tmpLvl.platDir)
 				danger.add(new_plat)
 			else :
+				platnum += 1
 				new_plat = Platform(True, None, tmpLvl.platDir)
-
+				decor_plat = new_plat
 
 			# if platforms overlap
 			# remove them
@@ -665,6 +719,7 @@ def main(tmpLvl):
 			px, py = plat.rect.topright
 			if px <= 0 or i > 10:
 				plat.kill()
+				plat = None
 
 		# Seagull spawning after player distance 500
 		if p1.relpos.x > 50000:
@@ -684,24 +739,46 @@ def main(tmpLvl):
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
 
-		if p1.relpos.x % (70 * 100) == 0 and p1.relpos.x != 0:
+		if p1.relpos.x % (70 * 100)//tmpLvl.factor == 0 and p1.relpos.x != 0:
 			PlayerSpeed += 1
 
 		# 1/chancenumber divided by 105/100
 			CHANCE //=1.05
 
 
+		if platnum % 20 == 0:
+			new_decor = PlatDecorations(decor_plat, None, tmpLvl.platDir)
+			if pygame.sprite.spritecollide(new_decor, decorations, False):
+				new_decor.kill()
+			else:
+				decorations.add(new_decor)
+
+		for decor in decorations:
+			x, y = decor.rect.center
+			if x < 0 - screen.get_width() * 2:
+				decor.image.set_alpha(0)
+				decorations.remove(decor)
+				decor.kill()
+
 		# Updating sprite groups
 		clouds.update()
 		seagulls.update()
 		p1.update(tmpLvl.jumpForce, tmpLvl.gravity)
+
+		# to cover glitchy sprites
+		screen.fill((0, 0, 0))
 
 		if tmpLvl.bg != None:
 			screen.blit(tmpLvl.image, tmpLvl.rect)
 		else:
 			screen.fill((55, 55, 155))
 
+		decorations.update()
+
 		# Drawing all sprites to screen
+		clouds.draw(screen)
+		decorations.draw(screen)
+
 		all_sprites.draw(screen)
 
 		screen.blit(score1, score1Rect)
@@ -885,7 +962,7 @@ def multiplayer(tmplvl):
 	numberGroup.add(p2Tag)
 
 	# Defining ground platform
-	plat1 = Platform(True, 'platforms/' + tmplvl.platDir + '/platform_5.png', None, sc1)
+	plat1 = Platform(True, 'platforms/' + tmplvl.platDir + '/' + tmplvl.startblock, None, sc1)
 
 	# Customizing platform
 	plat1.rect.topleft = (sc1.get_width() * 0.5, sc1.get_height() * 5//6 + 3)
@@ -913,6 +990,9 @@ def multiplayer(tmplvl):
 	ended = False
 	winner = None
 	counter = 0
+
+	platnum = 0
+	decor_plat = None
 
 	while True:
 
@@ -980,6 +1060,8 @@ def multiplayer(tmplvl):
 			if not pygame.sprite.spritecollide(new_plat, platforms, False):
 				platforms.add(new_plat)
 				all_sprites.add(new_plat)
+				platnum += 1
+				decor_plat = new_plat
 			else:
 				new_plat.kill()
 
@@ -1020,7 +1102,7 @@ def multiplayer(tmplvl):
 		# And if player score is not zero its self
 		# In this case it's only used to increment the speed since this is a race.
 
-		if counter > 9000 and counter % (20 * 100) == 0 and counter != 0:
+		if counter > 9000 and counter % (20 * 100)//tmplvl.factor == 0 and counter != 0:
 			alien = Seagull(tmplvl.platDir, sc1)
 
 			x, y = alien.rect.center
@@ -1034,21 +1116,41 @@ def multiplayer(tmplvl):
 				all_sprites.add(alien)
 
 
-		if counter % (2 * 1000) == 0 and counter != 0:
+		if counter % (2 * 1000)//tmplvl.factor == 0 and counter != 0:
 			PlayerSpeed += 1
 
 		# 1/chancenumber divided by 105/100
-			CHANCE //=1.05
+		CHANCE //=1.05
+
+		if platnum % 20 == 0 and platnum != 0:
+			new_decor = PlatDecorations(decor_plat, None, tmplvl.platDir)
+
+			if pygame.sprite.spritecollide(decor_plat, decorations, False):
+				new_decor.kill()
+			else:
+				decorations.add(new_decor)
+
+		for decor in decorations:
+			x, y = decor.rect.center
+			if x < 0 - screen.get_width()*2:
+				decor.image.set_alpha(0)
+				decorations.remove(decor)
+				decor.kill()
 
 		players.update(tmplvl.jumpForce, tmplvl.gravity)
 		numberGroup.update()
-
+		decorations.update()
 		aliens.update()
 
 
+		sc1.fill((0, 0, 0))
+		sc2.fill((0, 0, 0))
 
 		sc1.blit(tmplvl.image1, tmplvl.rect1)
 		sc2.blit(tmplvl.image2, tmplvl.rect2)
+
+		decorations.draw(sc1)
+		decorations.draw(sc2)
 
 		sc1.blit(p1.image, p1.rect)
 		sc1.blit(p1Tag.image, p1Tag.rect)
@@ -1074,6 +1176,20 @@ def multiplayer(tmplvl):
 		screen.blit(pd2, pd2Rect)
 
 
+		keys = pygame.key.get_pressed()
+
+		if keys[K_r]:
+			ended = False
+			sleep(0.5)
+			for sprite in all_sprites:
+				sprite.kill()
+
+			CHANCE = 128
+			PlayerSpeed = PSD
+
+			multiplayer(tmplvl)
+			startScreen()
+
 		if ended:
 
 			win2 = sub.render(winner.name, BG2, (55, 255, 55))
@@ -1086,7 +1202,6 @@ def multiplayer(tmplvl):
 
 
 			screen.blit(win, winRect)
-			keys = pygame.key.get_pressed()
 
 			if keys[K_RETURN]:
 				ended = False
@@ -1337,6 +1452,10 @@ def startScreen():
 		clock.tick(FPS)
 
 
+	pygame.mixer.music.stop()
+	pygame.mixer.music.unload()
+	pygame.mixer.music.load("songs/startups/startup-2.ogg")
+
 	bg.set_alpha(255)
 
 	bg = pygame.image.load("backgrounds/startbg2.png")
@@ -1348,6 +1467,8 @@ def startScreen():
 	titleRect.center = (width/2, height * 1//3)
 
 	multiLevel = multiplayerLevels[random.randint(0, len(multiplayerLevels)-1)]
+
+	pygame.mixer.music.play(-1, 0)
 
 	while True:
 		for event in pygame.event.get():
