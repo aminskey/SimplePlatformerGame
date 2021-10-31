@@ -64,6 +64,7 @@ danger = pygame.sprite.Group()
 players = pygame.sprite.Group()
 seagulls = pygame.sprite.Group()
 decorations = pygame.sprite.Group()
+scanlineGroup = pygame.sprite.Group()
 
 # text and screen background
 BG = (52, 164, 235)
@@ -78,7 +79,7 @@ PSD = 3
 # player speed
 PlayerSpeed = PSD
 
-CHANCE = 256
+CHANCE = 128
 # 1/256 = 0.25% chance of lava block
 
 FPS = 60
@@ -86,8 +87,9 @@ FPS = 60
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
 
-# debug value
-debug = True
+# extras
+debug = False
+scanlineBool = True
 
 # for startscreen
 Exit = False
@@ -513,6 +515,18 @@ class CoopLevel():
 
 		self.rect1.topleft = self.rect2.topleft = (0, 0)
 
+class Line(pygame.sprite.Sprite):
+	def __init__(self, thickness, alpha, color, pos):
+		super().__init__()
+
+		self.image = pygame.Surface((screen.get_width(), thickness))
+		self.image.fill(color)
+		self.image.set_alpha(alpha)
+
+		self.rect = self.image.get_rect()
+		self.rect.topleft = pos
+
+
 levels = [
 	Level("earth.png", ("space", None), "neon-run.ogg",  "platform_5.png", 10, 5, False, 0.15, 10),
 	Level(None, ("ground", "cloud.png"), "free-again.ogg", "platform_5.png", 10, 5, False, 1, 30),
@@ -528,6 +542,14 @@ multiplayerLevels = [
 	CoopLevel(("super-dual1.png", "super-dual2.png"), "neon", "platform_4.png", "dual-BGMs/super-dual.ogg", 10, 1, 30),
 	CoopLevel(("nebula-dual1.png", "nebula-dual2.png"), "neon", "platform_4.png", "dual-BGMs/nebula-dual.ogg", 10, 1, 30)
 ]
+def scanlines():
+	if scanlineBool:
+		thickness = 2
+		for i in range(screen.get_height()):
+			if i % (thickness * 2) == 0:
+				scanlineGroup.add(Line(thickness, 100, (0, 0, 0), (0, i)))
+
+scanlines()
 
 def bossFight():
 	boss = pygame.sprite.Group()
@@ -710,6 +732,11 @@ def main(tmpLvl):
 		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False) or x < 0:
 			PlayerSpeed = tmpLvl.psd
 			CHANCE = 128
+			for item in decorations:
+				all_sprites.add(item)
+			for item in clouds:
+				all_sprites.add(item)
+
 			gameOver()
 
 		# if platform is out of screen or if there are more than 10 platforms then destroy
@@ -717,7 +744,7 @@ def main(tmpLvl):
 		for plat in platforms:
 			i+=1
 			px, py = plat.rect.topright
-			if px <= 0 or i > 10:
+			if px <= -50 or i > 10:
 				plat.kill()
 				plat = None
 
@@ -786,6 +813,8 @@ def main(tmpLvl):
 
 		screen.blit(ps1, ps1Rect)
 		screen.blit(ps2, ps2Rect)
+
+		scanlineGroup.draw(screen)
 
 		# Refreshing screen
 		pygame.display.update()
@@ -1263,6 +1292,7 @@ def multiplayer(tmplvl):
 
 
 		# Refreshing screen
+		scanlineGroup.draw(screen)
 		pygame.display.update()
 
 		# Fixed Frame rate 110 recommended unless old computer
@@ -1333,25 +1363,35 @@ def helpScreen():
 		screen.blit(l6, l6Rect)
 		screen.blit(l7, l7Rect)
 
+		scanlineGroup.draw(screen)
 		clock.tick(FPS-10)
 		pygame.display.update()
 
 def introScreen():
 
-	logo = pygame.image.load("icons/gameLogo.png")
-	logoRect = logo.get_rect()
+	font = pygame.font.Font("fonts/segaArt.ttf", 125)
+	font2 = pygame.font.Font("fonts/pixelart.ttf", 125)
 
-	logoRect.center = (width/2, height/2)
+	logo = font2.render("A2", None, (218, 235, 33))
+	logo2 = font.render(" Games", None, (218, 235, 33))
+
+	logoRect  = logo.get_rect()
+	logo2Rect = logo2.get_rect()
+
+	logo2Rect.topleft = (width * 5//16, height/2)
+	logoRect.topright = logo2Rect.topleft
 
 	i = 0
-	## Game Logo
 
 	for i in range(255):
 		screen.fill((0, 0, 0))
 		screen.blit(logo, logoRect)
+		screen.blit(logo2, logo2Rect)
 
+		logo2.set_alpha(i)
 		logo.set_alpha(i)
 
+		scanlineGroup.draw(screen)
 		pygame.display.update()
 		clock.tick(FPS)
 
@@ -1360,16 +1400,20 @@ def introScreen():
 	while i > 0:
 		screen.fill((0, 0, 0))
 		screen.blit(logo, logoRect)
+		screen.blit(logo2, logo2Rect)
 
 		logo.set_alpha(i)
+		logo2.set_alpha(i)
 
 		i -= 1
 
+		scanlineGroup.draw(screen)
 		pygame.display.update()
 		clock.tick(FPS)
 
 
 def startScreen():
+
 
 	COLOR = (245, 245, 245)
 
@@ -1424,6 +1468,8 @@ def startScreen():
 
 	pygame.mixer.music.play(-1, 0)
 
+	scanlines()
+
 	global Exit
 
 	while not Exit:
@@ -1447,6 +1493,8 @@ def startScreen():
 		screen.blit(title, titleRect)
 
 		bg.set_alpha(alphaVal)
+
+		scanlineGroup.draw(screen)
 
 		pygame.display.update()
 		clock.tick(FPS)
@@ -1547,6 +1595,8 @@ def startScreen():
 		screen.blit(help, helpRect)
 		screen.blit(cursor, cursorRect)
 
+		scanlineGroup.draw(screen)
+
 		pygame.display.update()
 		clock.tick(FPS)
 
@@ -1590,6 +1640,7 @@ def gameOver():
 				pygame.quit()
 				sys.exit()
 
+		scanlineGroup.draw(screen)
 		pygame.display.flip()
 
 if not debug:
