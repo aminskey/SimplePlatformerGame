@@ -82,13 +82,13 @@ PlayerSpeed = PSD
 CHANCE = 128
 # 1/256 = 0.25% chance of lava block
 
-FPS = 60
+FPS = 55
 
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
 
 # extras
-debug = False
+debug = True
 scanlineBool = True
 
 # for startscreen
@@ -532,7 +532,9 @@ levels = [
 	Level(None, ("ground", "cloud.png"), "free-again.ogg", "platform_5.png", 10, 5, False, 1, 30),
 	Level("neon-city.png", ("neon", None), "extsong.ogg", "platform_4.png", 10, 7, False, 1, 30),
 	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", "platform_4.png", 7, 5, False, 1, 30),
-	Level("volcano-dash.png", ("ground", "cloud.png"), "lava-run.ogg", "platform_5.png", 11, 5, False, 1, 30)
+	Level("volcano-dash.png", ("ground", "cloud.png"), "lava-run.ogg", "platform_5.png", 11, 5, False, 1, 30),
+	Level("planet-run.png", ("ground", "cloud.png"), "planet-run.ogg", "platform_5.png", 11, 5, False, 1, 30),
+	Level("candyland.png", ("candy", None), "candyland.ogg", "platform_1.png", 11, 5, False, 1, 30)
 ]
 
 multiplayerLevels = [
@@ -540,7 +542,9 @@ multiplayerLevels = [
 	CoopLevel(("neon-dual1.png", "neon-dual2.png"), "neon", "platform_4.png", "dual-BGMs/neon-dual.ogg", 10, 1, 30),
 	CoopLevel(("mars-dual1.png", "mars-dual2.png"), "space", "platform_5.png", "dual-BGMs/mars-dual.ogg", 10, 0.3, 15),
 	CoopLevel(("super-dual1.png", "super-dual2.png"), "neon", "platform_4.png", "dual-BGMs/super-dual.ogg", 10, 1, 30),
-	CoopLevel(("nebula-dual1.png", "nebula-dual2.png"), "neon", "platform_4.png", "dual-BGMs/nebula-dual.ogg", 10, 1, 30)
+	CoopLevel(("nebula-dual1.png", "nebula-dual2.png"), "neon", "platform_4.png", "dual-BGMs/nebula-dual.ogg", 10, 1, 30),
+	CoopLevel(("exo-dual1.png", "exo-dual2.png"), "ground", "platform_5.png", "dual-BGMs/planet-dual.ogg", 10, 1, 30),
+	CoopLevel(("candy-dual1.png", "candy-dual2.png"), "candy", "platform_1.png", "dual-BGMs/candy-dual.ogg", 10, 1, 30)
 ]
 def scanlines():
 	if scanlineBool:
@@ -1208,6 +1212,9 @@ def multiplayer(tmplvl):
 		keys = pygame.key.get_pressed()
 
 		if keys[K_r]:
+			for sprite in decorations:
+				all_sprites.add(sprite)
+
 			ended = False
 			sleep(0.5)
 			for sprite in all_sprites:
@@ -1231,6 +1238,9 @@ def multiplayer(tmplvl):
 
 
 			screen.blit(win, winRect)
+
+			for sprite in decorations:
+				all_sprites.add(sprite)
 
 			if keys[K_RETURN]:
 				ended = False
@@ -1551,7 +1561,8 @@ def startScreen():
 					elif y == sy:
 						pygame.mixer.music.stop()
 						firstEntry = False
-						main(levels[random.randint(0, len(levels)-1)])
+						# main(levels[random.randint(0, len(levels)-1)])
+						main(levels[-1])
 						break
 					elif y == my:
 						pygame.mixer.music.stop()
