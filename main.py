@@ -90,6 +90,7 @@ vec = pygame.math.Vector2
 # extras
 debug = True
 scanlineBool = True
+multiBool = False
 
 # for startscreen
 Exit = False
@@ -457,10 +458,12 @@ class PlayerTag(pygame.sprite.Sprite):
 
 # Levels Class
 class Level():
-	def __init__(self, bg, spriteDirs, song, startblock, factor=1, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20):
+	def __init__(self, bg, spriteDirs, song, startblock, factor=1, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20, name="Unknown Level"):
 
 		self.bg = bg
 		self.factor=factor
+
+		self.name = name
 
 		if self.bg != None:
 			self.bg = "backgrounds/" + bg
@@ -483,9 +486,11 @@ class Level():
 		self.rect = self.image.get_rect()
 		self.rect.topleft = (0, 0)
 class CoopLevel():
-	def __init__(self, backgrounds, spriteDir, startblock, song, factor=1, gravity=0.5, jumpForce=20, PlayerStartSpeed=PSD, moveBool=False):
+	def __init__(self, backgrounds, spriteDir, startblock, song, factor=1, gravity=0.5, jumpForce=20, PlayerStartSpeed=PSD, moveBool=False, name="Unknown Level"):
 		self.bg1, self.bg2 = backgrounds
 		self.bgSong = song
+
+		self.name = name
 
 		self.bg1 = "backgrounds/dual-BGs/" + self.bg1
 		self.bg2 = "backgrounds/dual-BGs/" + self.bg2
@@ -519,87 +524,132 @@ class Line(pygame.sprite.Sprite):
 	def __init__(self, thickness, alpha, color, pos):
 		super().__init__()
 
+		self.alpha = alpha
+
 		self.image = pygame.Surface((screen.get_width(), thickness))
 		self.image.fill(color)
-		self.image.set_alpha(alpha)
+		self.image.set_alpha(self.alpha)
 
 		self.rect = self.image.get_rect()
 		self.rect.topleft = pos
 
-
 levels = [
-	Level("earth.png", ("space", None), "neon-run.ogg",  "platform_5.png", 10, 5, False, 0.15, 10),
-	Level(None, ("ground", "cloud.png"), "free-again.ogg", "platform_5.png", 10, 5, False, 1, 30),
-	Level("neon-city.png", ("neon", None), "extsong.ogg", "platform_4.png", 10, 7, False, 1, 30),
-	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", "platform_4.png", 7, 5, False, 1, 30),
-	Level("volcano-dash.png", ("ground", "cloud.png"), "lava-run.ogg", "platform_5.png", 11, 5, False, 1, 30),
-	Level("planet-run.png", ("ground", "cloud.png"), "planet-run.ogg", "platform_5.png", 11, 5, False, 1, 30),
-	Level("candyland.png", ("candy", None), "candyland.ogg", "platform_1.png", 11, 5, False, 1, 30)
+	Level("earth.png", ("space", None), "neon-run.ogg",  "platform_5.png", 10, 5, False, 0.15, 10, "Orbital Strike"),
+	Level(None, ("ground", "cloud.png"), "free-again.ogg", "platform_5.png", 10, 5, False, 1, 30, "Free again"),
+	Level("neon-city.png", ("neon", None), "extsong.ogg", "platform_4.png", 10, 7, False, 1, 30, "Neon City"),
+	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", "platform_4.png", 7, 5, False, 1, 30, "Neon outscape"),
+	Level("volcano-dash.png", ("ground", "cloud.png"), "lava-run.ogg", "platform_5.png", 11, 5, False, 1, 30, "Huanuna Island"),
+	Level("planet-run.png", ("ground", "cloud.png"), "planet-run.ogg", "platform_5.png", 11, 5, False, 1, 30, "Exo Dash"),
+	Level("candyland.png", ("candy", None), "candyland.ogg", "platform_1.png", 11, 5, False, 1, 30, "Candyland")
 ]
 
 multiplayerLevels = [
-	CoopLevel(("earthdual1.png", "earthdual2.png"), "space", "platform_5.png", "dual-BGMs/dual.ogg", 10, 0.3, 15),
-	CoopLevel(("neon-dual1.png", "neon-dual2.png"), "neon", "platform_4.png", "dual-BGMs/neon-dual.ogg", 10, 1, 30),
-	CoopLevel(("mars-dual1.png", "mars-dual2.png"), "space", "platform_5.png", "dual-BGMs/mars-dual.ogg", 10, 0.3, 15),
-	CoopLevel(("super-dual1.png", "super-dual2.png"), "neon", "platform_4.png", "dual-BGMs/super-dual.ogg", 10, 1, 30),
-	CoopLevel(("nebula-dual1.png", "nebula-dual2.png"), "neon", "platform_4.png", "dual-BGMs/nebula-dual.ogg", 10, 1, 30),
-	CoopLevel(("exo-dual1.png", "exo-dual2.png"), "ground", "platform_5.png", "dual-BGMs/planet-dual.ogg", 10, 1, 30),
-	CoopLevel(("candy-dual1.png", "candy-dual2.png"), "candy", "platform_1.png", "dual-BGMs/candy-dual.ogg", 10, 1, 30)
+	CoopLevel(("earthdual1.png", "earthdual2.png"), "space", "platform_5.png", "dual-BGMs/dual.ogg", 10, 0.3, 15, name="Satellite in Orbit"),
+	CoopLevel(("neon-dual1.png", "neon-dual2.png"), "neon", "platform_4.png", "dual-BGMs/neon-dual.ogg", 10, 1, 30, name="Neon City"),
+	CoopLevel(("mars-dual1.png", "mars-dual2.png"), "space", "platform_5.png", "dual-BGMs/mars-dual.ogg", 10, 0.3, 15, name="The red planet"),
+	CoopLevel(("super-dual1.png", "super-dual2.png"), "neon", "platform_4.png", "dual-BGMs/super-dual.ogg", 10, 1, 30, name="Microchip"),
+	CoopLevel(("nebula-dual1.png", "nebula-dual2.png"), "neon", "platform_4.png", "dual-BGMs/nebula-dual.ogg", 10, 1, 30, name="The Nebula\'s hidden layer"),
+	CoopLevel(("exo-dual1.png", "exo-dual2.png"), "ground", "platform_5.png", "dual-BGMs/planet-dual.ogg", 10, 1, 30, name="Exo-Planet run"),
+	CoopLevel(("candy-dual1.png", "candy-dual2.png"), "candy", "platform_1.png", "dual-BGMs/candy-dual.ogg", 10, 1, 30, name="Sugar Rush")
 ]
 def scanlines():
 	if scanlineBool:
-		thickness = 2
+		thickness = 1
 		for i in range(screen.get_height()):
 			if i % (thickness * 2) == 0:
 				scanlineGroup.add(Line(thickness, 100, (0, 0, 0), (0, i)))
-
 scanlines()
 
-def bossFight():
-	boss = pygame.sprite.Group()
 
-	bg = pygame.image.load("backgrounds/bg1.png")
-	bg = pygame.transform.scale(bg, res)
+def levelSelect(list, func):
+
+	font = pygame.font.Font("fonts/pixelart.ttf", 20)
+
+	fontcolor = (64, 125, 120)
+
+	levelMenu = pygame.Surface((screen.get_width()* 2//3, screen.get_height()))
+
+	menuRect = levelMenu.get_rect()
+	menuRect.topleft = (screen.get_width()//3, 0)
+
+	bg = pygame.image.load("backgrounds/levelSelect-bg.png")
+	bg = pygame.transform.scale(bg, (screen.get_width(), screen.get_height()))
 
 	bgRect = bg.get_rect()
 	bgRect.topleft = (0, 0)
 
-	spider = SpiderBoss()
 
-	spider.rect.center = (width//2, height//2)
+	cursor = font.render(">", BG2, (55, 255, 55))
+	cursorRect = cursor.get_rect()
+	cursorRect.topleft = (0, 0)
 
-	boss.add(spider)
-	all_sprites.add(spider)
+	lineList = []
 
-	p1 = Player()
-	p1.jumpGame = True
+	i = 0
+	for level in list:
+		tmp = font.render(level.name, BG2, fontcolor)
+		tmpRect = tmp.get_rect()
 
-	players.add(p1)
-	all_sprites.add(p1)
+		tmpRect.topleft = (20, i*tmp.get_height()+5)
 
-	plat1 = Platform(True, "platforms/ground/platform_5.png")
+		lineList.append((tmp, tmpRect, level))
 
-	plat1.image = pygame.transform.scale(plat1.image, (plat1.image.get_width()*2, plat1.image.get_height()*2))
-	plat1.rect = plat1.image.get_rect()
+		i += 1
 
-	plat1.rect.midtop = ((width - plat1.image.get_width())/2, height - plat1.image.get_height())
 
-	platforms.add(plat1)
-	all_sprites.add(plat1)
+	# clear rubish from screen
+	screen.fill((0, 0, 0))
+
+	pygame.mixer.music.load("songs/level-select.ogg")
+	pygame.mixer.music.play(-1)
+
+	itr = 0
 
 	while True:
 
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				pygame.quit()
-				sys.exit()
+				exit()
+			if event.type == pygame.KEYDOWN:
 
-		players.update()
-		boss.update()
+				keys = pygame.key.get_pressed()
+
+				if keys[K_UP]:
+					itr -= 1
+					break
+				if keys[K_DOWN]:
+					itr += 1
+					break
+				if keys[K_RETURN]:
+					pygame.mixer.music.stop()
+					pygame.mixer.music.unload()
+
+
+					if multiBool:
+						pygame.mixer.music.load("songs/"+level.bgSong)
+						pygame.mixer.music.play(-1)
+
+					func(level)
+					startScreen()
+					break
+
+		tmp, lnRect, level = lineList[itr]
+		cursorRect.midright = lnRect.midleft
 
 		screen.blit(bg, bgRect)
 
-		all_sprites.draw(screen)
+		levelMenu.fill((0, 0, 0))
+		levelMenu.set_alpha(200)
+
+		for line in lineList:
+			lineIMG, lineRect, tmp = line
+			levelMenu.blit(lineIMG, lineRect)
+
+		levelMenu.blit(cursor, cursorRect)
+		screen.blit(levelMenu, menuRect)
+
+		scanlineGroup.draw(screen)
 
 		pygame.display.update()
 		clock.tick(FPS)
@@ -827,120 +877,6 @@ def main(tmpLvl):
 		clock.tick(FPS)
 
 	pygame.mixer.music.unload()
-def jumpGame():
-	# numberGroup = pygame.sprite.Group()
-	platLeft = pygame.sprite.Group()
-	platRight = pygame.sprite.Group()
-
-
-	bg = pygame.image.load("backgrounds/dualbg.png")
-	bg = pygame.transform.scale(bg, res)
-
-	bgRect = bg.get_rect()
-	bgRect.topleft = (0, 0)
-
-	p1 = Player()
-	p1.jumpGame = True
-
-
-	p2 = Player2()
-	p2.jumpGame = True
-
-	players.add(p1)
-	players.add(p2)
-
-	sc1 = pygame.Surface((width/2 - 50, height))
-	sc1Rect = sc1.get_rect()
-	sc1Rect.topleft = (0, 0)
-
-	sc2 = pygame.Surface((width/2 - 50, height))
-	sc2Rect = sc2.get_rect()
-	sc2Rect.topleft = (width//2+50, 0)
-
-	print(sc1.get_size())
-
-	platbase = Platform(True, "platforms/space/platform_5.png", None, sc1)
-	platbase.image = pygame.transform.scale(platbase.image, (sc1.get_width(), platbase.image.get_height()))
-
-	platbase.rect = platbase.image.get_rect()
-	platbase.rect.topleft = (0, sc1.get_height() - platbase.image.get_height())
-
-	p1.rect.midbottom = platbase.rect.midtop
-	p2.rect.midbottom = platbase.rect.midtop
-
-
-	platLeft.add(platbase)
-	platRight.add(platbase)
-
-	platforms.add(platbase)
-	all_sprites.add(platbase)
-
-	while True:
-		for event in pygame.event.get():
-			if event == pygame.QUIT:
-				pygame.quit()
-				sys.exit()
-
-		for player in players.sprites():
-
-			if player.rect.y < sc1.get_height() * 1//3:
-
-				for i in range(5):
-					new_plat = Platform(True, None, "space", sc1)
-					new_plat.image = pygame.transform.scale(new_plat.image, (new_plat.image.get_width() * 2//3, new_plat.image.get_height() * 2//3))
-					new_plat.rect = new_plat.image.get_rect()
-
-					new_plat.rect.center = (random.randrange(0, sc1.get_width()), random.randrange(0, sc1.get_height()))
-
-
-					if pygame.sprite.spritecollide(new_plat, platforms, False):
-						new_plat.kill()
-					else:
-						if player.name == "Player1":
-							platLeft.add(new_plat)
-							platforms.add(new_plat)
-							all_sprites.add(new_plat)
-
-						if player.name == "Player2":
-							platRight.add(new_plat)
-							platforms.add(new_plat)
-							all_sprites.add(new_plat)
-
-
-				if player.name == "Player1":
-					for platform in platLeft.sprites():
-						x, y = platform.rect.center
-						y += sc1.get_height() * 1//3
-
-						platform.rect.center = x, y
-
-				if player.name == "Player2":
-					for platform in platRight.sprites():
-						x, y = platform.rect.center
-						y += sc1.get_height() * 1//3
-
-						platform.rect.center = x, y
-		players.update()
-
-		screen.blit(bg, bgRect)
-
-		sc1.fill((0, 0, 0))
-		sc2.fill((0, 0, 0))
-
-		sc1.blit(p1.image, p1.rect)
-		sc2.blit(p2.image, p2.rect)
-
-		sc1.blit(platbase.image, platbase.rect)
-		sc2.blit(platbase.image, platbase.rect)
-
-		platLeft.draw(sc1)
-		platRight.draw(sc2)
-
-		screen.blit(sc1, sc1Rect)
-		screen.blit(sc2, sc2Rect)
-
-		pygame.display.update()
-		clock.tick(FPS)
 
 def multiplayer(tmplvl):
 
@@ -1228,7 +1164,7 @@ def multiplayer(tmplvl):
 
 		if ended:
 
-			win2 = sub.render(winner.name, BG2, (55, 255, 55))
+			win2 = sub.render(winner.name, BG2, (55, 155, 255))
 
 			win2Rect = win2.get_rect()
 
@@ -1301,8 +1237,9 @@ def multiplayer(tmplvl):
 
 
 
-		# Refreshing screen
 		scanlineGroup.draw(screen)
+
+		# Refreshing screen
 		pygame.display.update()
 
 		# Fixed Frame rate 110 recommended unless old computer
@@ -1473,6 +1410,7 @@ def startScreen():
 	ex, ey = exitRect.midleft
 	mx, my = multiRect.midleft
 
+	global multiBool
 	global firstEntry
 
 
@@ -1560,18 +1498,23 @@ def startScreen():
 						startScreen()
 					elif y == sy:
 						pygame.mixer.music.stop()
+
 						firstEntry = False
-						# main(levels[random.randint(0, len(levels)-1)])
-						main(levels[-1])
+						multiBool = False
+
+						levelSelect(levels, main)
 						break
 					elif y == my:
+						'''
 						pygame.mixer.music.stop()
 						pygame.mixer.music.load("songs/" + multiLevel.bgSong)
 
 						pygame.mixer.music.play(-1, 0)
+						'''
 
+						multiBool = True
 						firstEntry = False
-						multiplayer(multiLevel)
+						levelSelect(multiplayerLevels, multiplayer)
 
 						break
 				if y == ey:
