@@ -458,15 +458,21 @@ class PlayerTag(pygame.sprite.Sprite):
 
 # Levels Class
 class Level():
-	def __init__(self, bg, spriteDirs, song, startblock, factor=1, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20, name="Unknown Level"):
+	def __init__(self, bg, spriteDirs, song, startblock, factor=1, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20, name="Unknown Level", diff="easy"):
 
 		self.bg = bg
 		self.factor=factor
 
+		self.diff = diff
+
 		self.name = name
 
 		if self.bg != None:
+			self.noBG = False
 			self.bg = "backgrounds/" + bg
+		else:
+			self.noBG = True
+			self.bg = "backgrounds/Unknown.png"
 
 		self.bgSong = song
 
@@ -486,7 +492,7 @@ class Level():
 		self.rect = self.image.get_rect()
 		self.rect.topleft = (0, 0)
 class CoopLevel():
-	def __init__(self, backgrounds, spriteDir, startblock, song, factor=1, gravity=0.5, jumpForce=20, PlayerStartSpeed=PSD, moveBool=False, name="Unknown Level"):
+	def __init__(self, backgrounds, spriteDir, startblock, song, factor=1, gravity=0.5, jumpForce=20, PlayerStartSpeed=PSD, moveBool=False, name="Unknown Level", diff="easy"):
 		self.bg1, self.bg2 = backgrounds
 		self.bgSong = song
 
@@ -497,6 +503,8 @@ class CoopLevel():
 
 		self.startblock = startblock
 
+
+		self.diff = diff
 
 		self.factor = factor
 
@@ -535,7 +543,7 @@ class Line(pygame.sprite.Sprite):
 
 levels = [
 	Level("earth.png", ("space", None), "neon-run.ogg",  "platform_5.png", 10, 5, False, 0.15, 10, "Orbital Strike"),
-	Level(None, ("ground", "cloud.png"), "free-again.ogg", "platform_5.png", 10, 5, False, 1, 30, "Free again"),
+	Level(None, ("ground", "cloud.png"), "free-again.ogg", "platform_5.png", 10, 5, False, 1, 30, "Free again", "Too Easy!!"),
 	Level("neon-city.png", ("neon", None), "extsong.ogg", "platform_4.png", 10, 7, False, 1, 30, "Neon City"),
 	Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", "platform_4.png", 7, 5, False, 1, 30, "Neon outscape"),
 	Level("volcano-dash.png", ("ground", "cloud.png"), "lava-run.ogg", "platform_5.png", 11, 5, False, 1, 30, "Huanuna Island"),
@@ -583,7 +591,13 @@ def levelSelect(list, func):
 	cursorRect = cursor.get_rect()
 	cursorRect.topleft = (0, 0)
 
+	prevWin = pygame.Surface((screen.get_width()//3 - 20, screen.get_height()//4))
+	prevRect = prevWin.get_rect()
+	prevRect.topleft = (10, screen.get_height()//4)
+
 	lineList = []
+	bgList = []
+	diffList = []
 
 	i = 0
 	for level in list:
@@ -592,7 +606,28 @@ def levelSelect(list, func):
 
 		tmpRect.topleft = (20, i*tmp.get_height()+5)
 
+		diff = font.render(level.diff, BG2, (152, 32, 32))
+		diffRect = diff.get_rect()
+
 		lineList.append((tmp, tmpRect, level))
+		diffList.append((diff, diffRect))
+
+		if not multiBool:
+			image = pygame.image.load(level.bg)
+			image = pygame.transform.scale(image, prevWin.get_size())
+
+			rect = image.get_rect()
+			rect.topleft = (0, 0)
+
+			bgList.append((image, rect))
+		else:
+			image = pygame.image.load(level.bg1)
+			image = pygame.transform.scale(image, prevWin.get_size())
+
+			rect = image.get_rect()
+			rect.topleft = (0, 0)
+
+			bgList.append((image, rect))
 
 		i += 1
 
@@ -616,11 +651,19 @@ def levelSelect(list, func):
 				keys = pygame.key.get_pressed()
 
 				if keys[K_UP]:
-					itr -= 1
+					if itr <= 0:
+						itr = len(lineList) - 1
+					else:
+						itr -= 1
 					break
 				if keys[K_DOWN]:
-					itr += 1
+
+					if itr >= len(lineList) - 1:
+						itr = 0
+					else:
+						itr += 1
 					break
+
 				if keys[K_RETURN]:
 					pygame.mixer.music.stop()
 					pygame.mixer.music.unload()
@@ -633,14 +676,25 @@ def levelSelect(list, func):
 					func(level)
 					startScreen()
 					break
+				if keys[K_ESCAPE]:
+					startScreen()
+					break
 
 		tmp, lnRect, level = lineList[itr]
+		bgImage, bgRect = bgList[itr]
+		diff, diffRect = diffList[itr]
+
+		diffRect.topleft = prevRect.bottomleft
+
 		cursorRect.midright = lnRect.midleft
 
 		screen.blit(bg, bgRect)
 
 		levelMenu.fill((0, 0, 0))
-		levelMenu.set_alpha(200)
+		levelMenu.set_alpha(150)
+
+		prevWin.blit(bgImage, bgRect)
+		screen.blit(diff, diffRect)
 
 		for line in lineList:
 			lineIMG, lineRect, tmp = line
@@ -648,6 +702,7 @@ def levelSelect(list, func):
 
 		levelMenu.blit(cursor, cursorRect)
 		screen.blit(levelMenu, menuRect)
+		screen.blit(prevWin, prevRect)
 
 		scanlineGroup.draw(screen)
 
@@ -656,6 +711,9 @@ def levelSelect(list, func):
 
 
 def main(tmpLvl):
+
+	if tmpLvl.noBG:
+		tmpLvl.bg = None
 
 	if tmpLvl.bg != None:
 		tmpLvl.loadBG()
