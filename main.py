@@ -1,5 +1,5 @@
 # full imports
-import pygame, sys, random
+import pygame, sys, random, cv2
 
 # import specific methods
 from pygame.locals import *
@@ -283,12 +283,6 @@ class Player(pygame.sprite.Sprite):
             x, y = self.rect.center
 
             if topx > x + 20 or topy > y + 40:
-                '''
-                if topy > y + 20 or topx > x + 50:
-                    self.jumpstate = True
-                else:
-                    self.jumpstate = False
-                '''
                 self.jumpstate = True
             else:
                 self.jumpstate = False
@@ -653,11 +647,8 @@ def levelSelect(list, func):
     menuRect = levelMenu.get_rect()
     menuRect.topleft = (screen.get_width() // 3, 0)
 
-    bg = pygame.image.load("backgrounds/levelSelect-bg.png")
-    bg = pygame.transform.scale(bg, (screen.get_width(), screen.get_height()))
-
-    bgRect = bg.get_rect()
-    bgRect.topleft = (0, 0)
+    bgGIF = cv2.VideoCapture("backgrounds/levelSelect.gif")
+    shape = bgGIF.read()[1].shape[1::-1]
 
     cursor = font.render(">", BG2, (55, 255, 55))
     cursorRect = cursor.get_rect()
@@ -731,11 +722,10 @@ def levelSelect(list, func):
 
         i += 1
 
+    bgGIF.release()
+
     # clear rubish from screen
     screen.fill((0, 0, 0))
-
-    pygame.mixer.music.load("songs/level-select.ogg")
-    pygame.mixer.music.play(-1)
 
     itr = 0
     row = 0
@@ -780,8 +770,14 @@ def levelSelect(list, func):
                     startScreen()
                     break
                 if keys[K_ESCAPE]:
-                    levelSelect(list, func)
+                    startScreen()
                     break
+
+        ret, frame = bgGIF.read()
+        if not ret:
+            bgGIF = cv2.VideoCapture("backgrounds/levelSelect.gif")
+            ret, frame = bgGIF.read()
+            shape = frame.shape[1::-1]
 
         tmp, lnRect, level = lineList[itr]
         bgImage, bgRect = bgList[itr]
@@ -791,7 +787,10 @@ def levelSelect(list, func):
 
         cursorRect.midright = lnRect.midleft
 
-        screen.blit(bg, bgRect)
+        bg = pygame.image.frombuffer(frame.tobytes(), shape, "BGR")
+        bg = pygame.transform.scale(bg, res)
+
+        screen.blit(bg, (0, 0))
 
         levelMenu.fill((0, 0, 0))
         levelMenu.set_alpha(150)
@@ -810,7 +809,7 @@ def levelSelect(list, func):
         scanlineGroup.draw(screen)
 
         pygame.display.update()
-        clock.tick(FPS)
+        clock.tick(30)
 
 
     run = True
@@ -824,9 +823,12 @@ def levelSelect(list, func):
                     keys = pygame.key.get_pressed()
 
                     if keys[K_ESCAPE]:
+                        bgGIF.release()
                         startScreen()
                         break
                     if keys[K_RETURN]:
+
+                        bgGIF.release()
 
                         pygame.mixer.music.stop()
                         pygame.mixer.music.unload()
@@ -876,7 +878,16 @@ def levelSelect(list, func):
             p1OffRect.center = p1OnRect.center
             p2OffRect.center = p2OnRect.center
 
-            screen.blit(bg, bgRect)
+            ret, frame = bgGIF.read()
+            if not ret:
+                bgGIF = cv2.VideoCapture("backgrounds/levelSelect.gif")
+                ret, frame = bgGIF.read()
+                shape = frame.shape[1::-1]
+
+            bg = pygame.image.frombuffer(frame.tobytes(), shape, "BGR")
+            bg = pygame.transform.scale(bg, res)
+
+            screen.blit(bg, (0, 0))
 
             if p1_state[itrRow[0]]:
                 screen.blit(p1On, p1OnRect)
@@ -901,7 +912,7 @@ def levelSelect(list, func):
             screen.blit(header, headerRect)
 
             pygame.display.update()
-            clock.tick(FPS)
+            clock.tick(30)
 
 def main(tmpLvl):
     if tmpLvl.noBG:
@@ -1576,20 +1587,18 @@ def introScreen():
 def startScreen():
     COLOR = (245, 245, 245)
 
-    bg = pygame.image.load("backgrounds/startbg.png")
-    bg = pygame.transform.scale(bg, res)
+    pygame.mixer.music.load('songs/startups/startup.ogg')
 
-    pygame.mixer.music.load('songs/startups/startup-1.ogg')
+    firstGIF = cv2.VideoCapture("backgrounds/startup-1.gif")
+    shape = firstGIF.read()[1].shape[1::-1]
 
     alphaVal = 0
-
-    bgRect = bg.get_rect()
-    bgRect.center = (width // 2, height // 2)
 
     header = pygame.font.Font('fonts/pixelart.ttf', 50)
     sub = pygame.font.Font('fonts/pixelart.ttf', 25)
 
     title = header.render(name, BG2, COLOR)
+    stMode = sub.render('Story Mode', BG2, COLOR)
     start = sub.render('Arcade', BG2, COLOR)
     multi = sub.render('Multiplayer', BG2, COLOR)
     help = sub.render('Help', BG2, COLOR)
@@ -1603,11 +1612,13 @@ def startScreen():
     multiRect = multi.get_rect()
     helpRect = help.get_rect()
     exitRect = exit.get_rect()
+    stModeRect = stMode.get_rect()
 
     cursorRect = cursor.get_rect()
 
     titleRect.center = (width / 2, height * 1 // 2)
 
+    stModeRect.center = (width/2, height * 1 // 2 - 30)
     startRect.center = (width / 2, height * 1 // 2 - 10)
     multiRect.center = (width / 2, height * 1 // 2 + 10)
     helpRect.center = (width / 2, height * 1 // 2 + 30)
@@ -1616,7 +1627,7 @@ def startScreen():
     cursorRect.center = (width // 2 - 50, height * 1 // 2 - 10)
 
     x, y = cursorRect.center
-
+    stx, sty = stModeRect.center
     sx, sy = startRect.midleft
     hx, hy = helpRect.midleft
     ex, ey = exitRect.midleft
@@ -1625,7 +1636,7 @@ def startScreen():
     global multiBool
     global firstEntry
 
-    pygame.mixer.music.play(-1, 0)
+    pygame.mixer.music.play(-1, 1.2)
 
     scanlines()
 
@@ -1646,9 +1657,18 @@ def startScreen():
             if event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                 Exit = True
 
+        ret, frame = firstGIF.read()
+        if not ret:
+            firstGIF = cv2.VideoCapture("backgrounds/startup-1.gif")
+            ret, frame = firstGIF.read()
+            shape = frame.shape[1::-1]
+
+        bg = pygame.image.frombuffer(frame.tobytes(), shape, "BGR")
+        bg = pygame.transform.scale(bg, res)
+
         screen.fill((255, 255, 255))
 
-        screen.blit(bg, bgRect)
+        screen.blit(bg, (0, 0))
         screen.blit(title, titleRect)
 
         bg.set_alpha(alphaVal)
@@ -1656,25 +1676,14 @@ def startScreen():
         scanlineGroup.draw(screen)
 
         pygame.display.update()
-        clock.tick(FPS)
+        clock.tick(15)
 
-    pygame.mixer.music.stop()
-    pygame.mixer.music.unload()
-    pygame.mixer.music.load("songs/startups/startup-2.ogg")
+    firstGIF.release()
 
-    bg.set_alpha(255)
-
-    bg = pygame.image.load("backgrounds/startbg2.png")
-    bg = pygame.transform.scale(bg, res)
-
-    bgRect = bg.get_rect()
-    bgRect.topleft = (0, 0)
+    secGIF = cv2.VideoCapture("backgrounds/startup-2.gif")
+    shape = secGIF.read()[1].shape[1::-1]
 
     titleRect.center = (width / 2, height * 1 // 3)
-
-    multiLevel = multiplayerLevels[random.randint(0, len(multiplayerLevels) - 1)]
-
-    pygame.mixer.music.play(-1, 0)
 
     while True:
         for event in pygame.event.get():
@@ -1693,8 +1702,6 @@ def startScreen():
                 if key[K_u]:
                     pygame.mixer.init()
 
-                kstate = key[-1]
-
                 if key[K_RETURN] or key[K_SPACE]:
                     if y == ey:
                         pygame.mixer.music.stop()
@@ -1705,8 +1712,7 @@ def startScreen():
                         firstEntry = False
                         helpScreen()
                         startScreen()
-                    elif y == sy:
-                        pygame.mixer.music.stop()
+                    elif y == sy or y == sty:
 
                         firstEntry = False
                         multiBool = False
@@ -1714,17 +1720,9 @@ def startScreen():
                         levelSelect(levels, main)
                         break
                     elif y == my:
-                        '''
-						pygame.mixer.music.stop()
-						pygame.mixer.music.load("songs/" + multiLevel.bgSong)
-
-						pygame.mixer.music.play(-1, 0)
-						'''
-
                         multiBool = True
                         firstEntry = False
                         levelSelect(multiplayerLevels, multiplayer)
-
                         break
                 if y == ey:
                     x = ex - 20
@@ -1734,19 +1732,33 @@ def startScreen():
                     x = sx - 20
                 elif y == my:
                     x = mx - 20
+                elif y == sty:
+                    x = stModeRect.midleft[0] - 20
 
                 if y > ey:
-                    y = sy
-                if y < sy:
+                    y = sty
+                    x = stModeRect.midleft[0] - 20
+                if y < sty:
                     y = ey
+                    x = ex - 20
+
+        ret, frame = secGIF.read()
+        if not ret:
+            secGIF = cv2.VideoCapture("backgrounds/startup-2.gif")
+            ret, frame = secGIF.read()
+            shape = frame.shape[1::-1]
+
+        bg = pygame.image.frombuffer(frame.tobytes(), shape, "BGR")
+        bg = pygame.transform.scale(bg, res)
 
         cursorRect.center = (x, y)
 
         screen.fill((255, 255, 255))
 
-        screen.blit(bg, bgRect)
+        screen.blit(bg, (0, 0))
 
         screen.blit(title, titleRect)
+        screen.blit(stMode, stModeRect)
         screen.blit(start, startRect)
         screen.blit(multi, multiRect)
         screen.blit(exit, exitRect)
@@ -1756,7 +1768,7 @@ def startScreen():
         scanlineGroup.draw(screen)
 
         pygame.display.update()
-        clock.tick(FPS)
+        clock.tick(15)
 
 
 def gameOver():
