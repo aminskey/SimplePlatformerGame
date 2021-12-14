@@ -318,9 +318,6 @@ class Player(pygame.sprite.Sprite):
         # Creating bounding box
         if x > width * 2//3:
             x = width * 2//3
-        if x < width//3:
-            x = width//3
-
         # Updating Position
         self.rect.midtop = (x, y)
 
@@ -332,7 +329,7 @@ class Player(pygame.sprite.Sprite):
             platx, platy = plat.rect.midtop
 
             plat_w = plat.image.get_width()
-            plat_h = plat.image.get_height()
+            # plat_h = plat.image.get_height()
 
             # If player collides with platform and is deep in the block
             # Then stop all motion except for jumping mechanism
@@ -822,6 +819,7 @@ def levelSelect(list, func):
         screen.blit(levelMenu, menuRect)
         screen.blit(prevWin, prevRect)
 
+        scanlineGroup.draw(prevWin)
         scanlineGroup.draw(screen)
 
         pygame.display.update()
@@ -920,9 +918,9 @@ def levelSelect(list, func):
             screen.blit(p2, p2Rect)
 
             screen.blit(cursor, cursorRect)
-
             screen.blit(header, headerRect)
 
+            scanlineGroup.draw(screen)
             pygame.display.update()
             clock.tick(30)
 def test_level():
@@ -1382,7 +1380,7 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
                 aliens.add(alien)
                 all_sprites.add(alien)
 
-        if counter % (2 * 1000) // tmplvl.factor == 0 and counter != 0:
+        if counter % (1000) // tmplvl.factor == 0 and counter != 0:
             PlayerSpeed += 1
 
         # 1/chancenumber divided by 105/100
