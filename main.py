@@ -80,7 +80,7 @@ PlayerSpeed = PSD
 CHANCE = 32
 # 1/32 = 3.125% chance of lava block
 
-FPS = 55
+FPS = 45
 
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
@@ -207,11 +207,12 @@ class Seagull(pygame.sprite.Sprite):
 # Player class
 class Player(pygame.sprite.Sprite):
     # initial settings
-    def __init__(self, AIMode=False, sizeFactor=1, name="Player1", surf=screen):
+    def __init__(self, AIMode=False, sideLength=40, sizeFactor=1, name="Player1", surf=screen):
         super().__init__()
+        self.sideLength = sideLength
 
-        self.image = pygame.image.load("players/player.png")
-        self.image = pygame.transform.scale(self.image, (40 // sizeFactor, 40 // sizeFactor))
+        self.image = pygame.image.load("players/player2.png")
+        self.image = pygame.transform.scale(self.image, (self.sideLength // sizeFactor, self.sideLength // sizeFactor))
 
         self.rect = self.image.get_rect()
 
@@ -225,6 +226,9 @@ class Player(pygame.sprite.Sprite):
         self.dead = False
         self.AIMode = AIMode
         self.jumpGame = False
+
+        if self.AIMode:
+            self.jumpstate = False
 
         self.fric = -0.12
         self.vel = 0
@@ -269,31 +273,33 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (x, y)
 
     def AI(self):
-        if pygame.sprite.spritecollide(self, platforms, False):
-
-            collided = pygame.sprite.spritecollide(self, platforms, False)
-
-            new_plat = None
-            i = 0
-
-            for plat in platforms.sprites():
-                if plat == collided[-1]:
-                    new_plat = platforms.sprites()[i + 1]
-                    break
-            i += 1
-
-            topx, topy = new_plat.rect.topleft
-            x, y = self.rect.center
-
-            if topx > x + 20 or topy > y + 40:
-                self.jumpstate = True
-            else:
-                self.jumpstate = False
-
-        elif self.rect.y < 0:
+        if pygame.sprite.spritecollideany(self, platforms):
             self.jumpstate = False
 
-    # Gravity mechanism
+            collided_platform = pygame.sprite.spritecollide(self, platforms, False)[-1]
+            next_platform = None
+
+
+            # Calculate index number for collided platform
+            index = 0
+            for plat in platforms.sprites():
+                if plat == collided_platform:
+                    next_platform = platforms.sprites()[index + 1]
+                    break
+                index += 1
+
+            distance = (next_platform.rect.midleft[0] - collided_platform.rect.midright[0])
+
+            if distance <= 80 and self.rect.centery <= collided_platform.rect.midtop[0]:
+                self.jumpstate = False
+            elif distance <= 200 and self.rect.centery <= collided_platform.rect.midtop[0]:
+                if self.rect.y <= 10:
+                    self.jumpstate = False
+            elif self.rect.centerx >= collided_platform.rect.midright[0] or self.rect.centery >= collided_platform.rect.midtop[1]:
+                self.jumpstate = True
+
+
+    # Gravity mechanics
     def gravity(self, gravityDecimal=0.5):
 
         x, y = self.rect.center
@@ -352,12 +358,12 @@ class Player(pygame.sprite.Sprite):
         if self.jumpGame:
             self.move()
 
+        if self.AIMode:
+            self.AI()
+
         # If not in air allow jump mechanism
         if self.jumpstate:
             self.jump(jumpForce)
-
-        if self.AIMode:
-            self.AI()
 
         # Running virtual gravity method
         self.gravity(gravity)
@@ -424,10 +430,13 @@ class SpiderBoss(pygame.sprite.Sprite):
 
 
 class Player2(Player):
-    def __init__(self, surf, sizeFactor=1, name="Player2", AI_Mode=False):
+    def __init__(self, surf, sizeFactor=1, name="Player2", AI_Mode=False, sideLength=40):
         super().__init__()
-        self.image = pygame.image.load("players/player2.png")
-        self.image = pygame.transform.scale(self.image, (40 // sizeFactor, 40 // sizeFactor))
+
+        self.sideLength = sideLength
+
+        self.image = pygame.image.load("players/player.png")
+        self.image = pygame.transform.scale(self.image, (self.sideLength // sizeFactor, self.sideLength // sizeFactor))
 
         self.rect = self.image.get_rect()
 
@@ -436,6 +445,9 @@ class Player2(Player):
         self.name = name
         self.AIMode = AI_Mode
         self.screen = surf
+
+        if self.AIMode:
+            self.jumpstate = False
 
     def jump(self, jumpForce=20):
         x, y = self.rect.center
@@ -578,6 +590,12 @@ class Line(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.topleft = pos
 
+class Text(pygame.sprite.Sprite):
+    def __init__(self, str, BG_FG_Color, script, pos):
+        self.image = script.render(str, BG_FG_Color[0], BG_FG_Color[1])
+
+        self.rect = self.image.get_rect()
+        self.rect.center = pos
 
 levels = [
     Level("earth.png", ("space", None), "neon-run.ogg", "platform_5.png", 10, 11, False, 0.15, 10, "Orbital Strike"),
@@ -1226,12 +1244,12 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
     tmplvl.loadBG(screen.get_size(), sc1.get_size())
 
     # defining players
-    p1 = Player(surf=sc1, AIMode=p1Mode)
+    p1 = Player(surf=sc1, AIMode=p1Mode, sideLength=35)
     players.add(p1)
 
     p1Tag = PlayerTag(p1, "1")
 
-    p2 = Player2(sc2, AI_Mode=p2Mode)
+    p2 = Player2(sc2, AI_Mode=p2Mode, sideLength=35)
     players.add(p2)
 
     p2Tag = PlayerTag(p2, "2")
@@ -1262,6 +1280,12 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
     # Creating font object
     header = pygame.font.Font('fonts/segaArt.ttf', 100)
     sub = pygame.font.Font('fonts/pixelart.ttf', 25)
+
+    line1 = Text("Player 1: ", BG_FG_Color=(None, (150, 250, 150)), script=sub, pos=(0, 0))
+    line2 = Text("Player 2: ", BG_FG_Color=(None, (150, 250, 150)), script=sub, pos=(0, 0))
+
+    line1.rect.topleft = (0, 0)
+    line2.rect.topleft = line1.rect.bottomleft
 
     ended = False
     winner = None
@@ -1325,8 +1349,7 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
             new_plat.image.get_width() * 2 // 3, new_plat.image.get_height() * 2 // 3))
 
             new_plat.rect = new_plat.image.get_rect()
-            new_plat.rect.center = (random.randrange(sc1.get_width() * 1.05, sc1.get_width() * 1.5),
-                                    random.randrange(sc1.get_height() * 8 // 12, sc1.get_height() * 5 // 6))
+            new_plat.rect.center = (random.randrange(sc1.get_width() * 1.05, sc1.get_width() * 1.5), random.randrange(sc1.get_height() * 8 // 12, sc1.get_height() * 5 // 6))
 
             # if platforms overlap
             # remove them
@@ -1347,20 +1370,20 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
                     all_sprites.remove(delPlayer)
                     players.remove(delPlayer)
 
+                    delPlayer.rect.bottomright = (0, 0)
+
                     delPlayer.kill()
-
-                    winner = players.sprites()[0]
-
-                    PlayerSpeed = 0
-
-                    ended = True
                     break
+
+        if len(players.sprites()) < 2:
+            winner = players.sprites()[-1]
+            PlayerSpeed = 1
+            ended = True
         # if platform is out of screen or if there are more than 10 platforms then destroy
         i = 0
         for plat in platforms:
             i += 1
-            px, py = plat.rect.topright
-            if px <= 0 or i > 10:
+            if plat.rect.topright[0] <= 0 or i > 10:
                 plat.kill()
 
         # When players score divided by 100 gives a remainder of 0.
@@ -1383,7 +1406,7 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
         if counter % (1000) // tmplvl.factor == 0 and counter != 0:
             PlayerSpeed += 1
 
-        # 1/chancenumber divided by 105/100
+        # 1/chancenumber  = itself / 1.05
         CHANCE //= 1.05
 
         if platnum % 20 == 0 and platnum != 0:
@@ -1395,13 +1418,13 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
                 decorations.add(new_decor)
 
         for decor in decorations:
-            x, y = decor.rect.center
-            if x < 0 - screen.get_width() * 2:
-                decor.image.set_alpha(0)
+            if decor.rect.midright[0] < 0 - screen.get_width() * 0.5:
                 decorations.remove(decor)
                 decor.kill()
+                break
 
-        players.update(tmplvl.jumpForce, tmplvl.gravity)
+        for player in players.sprites():
+            player.update(tmplvl.jumpForce, tmplvl.gravity)
         numberGroup.update()
         decorations.update()
         aliens.update()
@@ -1424,6 +1447,9 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
         # Drawing all sprites to screen
         all_sprites.draw(sc1)
         all_sprites.draw(sc2)
+
+        sc1.blit(line1.image, line1.rect)
+        sc2.blit(line2.image, line2.rect)
 
         # Showing splitscreen
         screen.blit(sc1, sc1Rect)
