@@ -77,10 +77,10 @@ PSD = 4
 # player speed
 PlayerSpeed = PSD
 
-CHANCE = 32
+CHANCE = 64
 # 1/32 = 3.125% chance of lava block
 
-FPS = 45
+FPS = 50
 
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
@@ -89,6 +89,7 @@ vec = pygame.math.Vector2
 debug = True
 scanlineBool = True
 multiBool = False
+ended = False
 
 # for startscreen
 Exit = False
@@ -204,14 +205,26 @@ class Seagull(pygame.sprite.Sprite):
             self.kill()
 
 
+class PlayerObject():
+    def __init__(self, name, sizeFactor):
+        self.name = name
+        if not multiBool:
+            self.sideLength = 40
+        else:
+            self.sideLength = 35
+
+        self.sizeFactor = sizeFactor
+        self.image = pygame.image.load("players/"+name+".png")
 # Player class
 class Player(pygame.sprite.Sprite):
     # initial settings
-    def __init__(self, AIMode=False, sideLength=40, sizeFactor=1, name="Player1", surf=screen):
+    def __init__(self, playerObject, AIMode=False, surf=screen, player1Bool = True):
         super().__init__()
-        self.sideLength = sideLength
+        self.sideLength = playerObject.sideLength
 
-        self.image = pygame.image.load("players/player2.png")
+        sizeFactor = playerObject.sizeFactor
+
+        self.image = playerObject.image
         self.image = pygame.transform.scale(self.image, (self.sideLength // sizeFactor, self.sideLength // sizeFactor))
 
         self.rect = self.image.get_rect()
@@ -221,48 +234,86 @@ class Player(pygame.sprite.Sprite):
         self.acc = 0
         self.relpos = vec(self.rect.center)
 
-        self.name = name
+        self.name = playerObject.name
         self.jumpstate = True
         self.dead = False
         self.AIMode = AIMode
         self.jumpGame = False
 
+        self.moveBools = [False, False]
+
         if self.AIMode:
             self.jumpstate = False
 
-        self.fric = -0.12
         self.vel = 0
+        self.prevVel = 0
+
+        self.player1Bool = player1Bool
+
+        self.fric = -0.30
 
         self.screen = surf
 
-    def move(self):
-        x, y = self.rect.center
+    def move(self, keys):
+        if self.player1Bool:
+            if keys[K_RIGHT]:
+                self.vel += PSD//4
+            if keys[K_LEFT]:
+                self.vel -= PSD//4
+        else:
+            if keys[K_d]:
+                self.vel += PSD//4
+            if keys[K_a]:
+                self.vel -= PSD//4
 
-        keys = pygame.key.get_pressed()
+        if self.vel >= PSD * 3:
+            self.vel = PSD * 3
+        elif self.vel <= -PSD * 3:
+            self.vel = -PSD * 3
 
-        if keys[K_RIGHT]:
-            self.vel += PSD
-        if keys[K_LEFT]:
-            self.vel -= PSD
+        if self.rect.midright[0] > width * 5//6:
 
-        x += self.vel
+            # self.rect.midright = (width * 5//6, self.rect.midright[1])
+            self.rect.midright = (self.rect.midright[0] + self.vel, self.rect.midright[1])
+            # self.vel -= 1
 
-        self.rect.center = (x, y)
+        elif self.rect.midleft[0] < width//6:
+
+            # self.rect.midleft = (width//6, self.rect.midleft[1])
+            self.rect.midleft = (self.rect.midleft[0] + self.vel, self.rect.midleft[1])
+            # self.vel += 1
+
+        else:
+            if self.vel != 0:
+                self.prevVel = self.vel
+
+            if self.vel < 0:
+                self.rect.centerx += self.vel - self.fric
+            if self.vel > 0:
+                self.rect.centerx += self.vel + self.fric
+
+            self.moveBools = [False, False]
+        if pygame.sprite.spritecollideany(self, platforms):
+            if self.vel < 0:
+                self.vel -= self.fric
+            if self.vel > 0:
+                self.vel += self.fric
+
 
     # Jump mechanism
-    def jump(self, jumpForce=20):
+    def jump(self, keys, jumpForce=20):
 
         x, y = self.rect.center
-
-        # key mapping
-        keys = pygame.key.get_pressed()
-        mkeys = pygame.mouse.get_pressed()
 
         # Event handling
         if not self.AIMode:
-            if keys[K_SPACE] or mkeys[0]:
-                # jumping
-                y -= jumpForce
+            if self.player1Bool:
+                if keys[K_SPACE]:
+                    # jumping
+                    y -= jumpForce
+            else:
+                if keys[K_w]:
+                    y -= jumpForce
             if p1Pad != None:
                 if p1Pad.get_button(0):
                     y -= jumpForce
@@ -318,12 +369,10 @@ class Player(pygame.sprite.Sprite):
 
     # The Update mechanism
     def update(self, jumpForce=20, gravity=0.5):
-
         x, y = self.rect.midtop
 
-        # Creating bounding box
-        if x > width * 2//3:
-            x = width * 2//3
+        keys = pygame.key.get_pressed()
+
         # Updating Position
         self.rect.midtop = (x, y)
 
@@ -356,14 +405,14 @@ class Player(pygame.sprite.Sprite):
         self.relpos.x += PlayerSpeed
 
         if self.jumpGame:
-            self.move()
+            self.move(keys)
 
         if self.AIMode:
             self.AI()
 
         # If not in air allow jump mechanism
         if self.jumpstate:
-            self.jump(jumpForce)
+            self.jump(keys, jumpForce)
 
         # Running virtual gravity method
         self.gravity(gravity)
@@ -400,89 +449,8 @@ class PlatDecorations(pygame.sprite.Sprite):
         x, y = self.rect.midbottom
 
         self.rect.midbottom = (x, y + self.image.get_height() * 1 // 6)
-
-
-class Boss(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
-
-
-class SpiderBoss(pygame.sprite.Sprite):
-    def __init__(self, surface=screen):
-        super().__init__()
-
-        self.alphaVal = 0
-
-        width, height = surface.get_size()
-
-        self.image = pygame.image.load("bosses/spider/SpiderBoss.png")
-
-        self.rect = self.image.get_rect()
-        self.rect.center = (width // 2, height * 2)
-
-        self.entry = False
-
-    def opening(self):
-        self.image.set_alpha(self.alphaVal)
-
-        if self.alphaVal < 254:
-            self.alphaVal += 1
-
-
-class Player2(Player):
-    def __init__(self, surf, sizeFactor=1, name="Player2", AI_Mode=False, sideLength=40):
-        super().__init__()
-
-        self.sideLength = sideLength
-
-        self.image = pygame.image.load("players/player.png")
-        self.image = pygame.transform.scale(self.image, (self.sideLength // sizeFactor, self.sideLength // sizeFactor))
-
-        self.rect = self.image.get_rect()
-
-        self.rect.center = (width // 2, 0)
-
-        self.name = name
-        self.AIMode = AI_Mode
-        self.screen = surf
-
-        if self.AIMode:
-            self.jumpstate = False
-
-    def jump(self, jumpForce=20):
-        x, y = self.rect.center
-
-        # key mapping
-        keys = pygame.key.get_pressed()
-
-        # Event handling
-        if not self.AIMode:
-            if keys[K_w]:
-
-                # jumping
-                y -= jumpForce
-            elif p2Pad != None:
-                if p2Pad.get_button(0):
-                    y -= jumpForce
-        else:
-            y -= jumpForce
-
-        # Updating position
-        self.rect.center = (x, y)
-
-    def move(self):
-        x, y = self.rect.center
-
-        keys = pygame.key.get_pressed()
-
-        if keys[K_d]:
-            x += PSD
-        if keys[K_a]:
-            x -= PSD
-
-        self.rect.center = (x, y)
-
-    pass
+        if self.rect.centerx <= 0:
+            self.kill()
 
 
 class PlayerTag(pygame.sprite.Sprite):
@@ -492,6 +460,7 @@ class PlayerTag(pygame.sprite.Sprite):
         font = pygame.font.Font("fonts/pixelart.ttf", 40)
 
         self.image = font.render(number, BG2, (55, 255, 55))
+        self.num = number
 
         self.player = player
 
@@ -500,11 +469,13 @@ class PlayerTag(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.midbottom = self.player.rect.midtop
+        if not self.player:
+            self.kill()
 
 
 # Levels Class
 class Level():
-    def __init__(self, bg, spriteDirs, song, startblock, factor=1, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20, name="Unknown Level", diff="easy"):
+    def __init__(self, bg, spriteDirs, song, startblock, factor=1, playerStartSpeed=PSD, moveBool=False, gravity=0.5, jumpForce=20, name="Unknown Level", diff="easy", zoomMode=False):
 
         self.bg = bg
         self.factor = factor
@@ -512,6 +483,8 @@ class Level():
         self.diff = diff
 
         self.name = name
+
+        self.zoomMode = zoomMode
 
         if self.bg != None:
             self.noBG = False
@@ -533,22 +506,23 @@ class Level():
 
     def loadBG(self, surf=screen):
         self.image = pygame.image.load(self.bg)
-        self.image = pygame.transform.scale(self.image, surf.get_size())
+        if self.zoomMode:
+            self.image = pygame.transform.scale(self.image, (surf.get_width()*2, surf.get_height()*2)).convert()
+        else:
+            self.image = pygame.transform.scale(self.image, surf.get_size())
 
         self.rect = self.image.get_rect()
-        self.rect.topleft = (0, 0)
+        self.rect.bottomleft = (0, surf.get_height())
 
 
 class CoopLevel():
-    def __init__(self, backgrounds, spriteDir, startblock, song, factor=1, gravity=0.5, jumpForce=20,
-                 PlayerStartSpeed=PSD, moveBool=False, name="Unknown Level", diff="easy"):
-        self.bg1, self.bg2 = backgrounds
+    def __init__(self, backgrounds, spriteDir, startblock, song, factor=1, gravity=0.5, jumpForce=20, PlayerStartSpeed=PSD, moveBool=False, name="Unknown Level", diff="easy"):
+        self.bg1 = backgrounds
         self.bgSong = song
 
         self.name = name
 
         self.bg1 = "backgrounds/dual-BGs/" + self.bg1
-        self.bg2 = "backgrounds/dual-BGs/" + self.bg2
 
         self.startblock = startblock
 
@@ -564,18 +538,16 @@ class CoopLevel():
         self.gravity = gravity
         self.jumpForce = jumpForce
 
-    def loadBG(self, size1, size2):
+    def loadBG(self, size1):
         self.image1 = pygame.image.load(self.bg1)
         self.image1 = pygame.transform.scale(self.image1, size1)
 
-        self.image2 = pygame.image.load(self.bg2)
-        self.image2 = pygame.transform.scale(self.image2, size2)
 
         self.rect1 = self.image1.get_rect()
-        self.rect2 = self.image2.get_rect()
+        self.rect2 = self.image1.get_rect()
 
-        self.rect1.topleft = self.rect2.topleft = (0, 0)
-
+        self.rect1.topleft = (0, 0)
+        self.rect2.topleft = (0, -self.image1.get_height()//2)
 
 class Line(pygame.sprite.Sprite):
     def __init__(self, thickness, alpha, color, pos):
@@ -596,13 +568,69 @@ class Text(pygame.sprite.Sprite):
 
         self.rect = self.image.get_rect()
         self.rect.center = pos
+class Boss(pygame.sprite.Sprite):
+    def __init__(self, name, homePlat):
+        super().__init__()
 
+        self.size = (839//2, 640//2)
+
+        self.walk_slides = returnFrames("bosses/" + name + "/" + name + "_walk.gif", self.size, True)
+        self.fire_slides = returnFrames("bosses/" + name + "/" + name + "_fire.gif", self.size, True)
+
+        self.invert_walk_slides = returnFrames("bosses/" + name + "/" + name + "_inverted_walk.gif", self.size, True)
+        self.invert_fire_slides = returnFrames("bosses/" + name + "/" + name + "_inverted_fire.gif", self.size, True)
+
+        self.idle = self.fire_slides[0]
+
+        self.image = self.idle
+        self.rect = self.image.get_rect()
+
+        self.base_plat = homePlat
+        self.rect.midbottom = (self.base_plat.rect.midtop[0], self.base_plat.rect.midtop[1] + 20)
+
+        self.functions = ["walk", "fire", "stay", "invertWalk", "invertFire", "invertStay", "radar"]
+        self.currentFunc = self.functions[0]
+
+        self.commands = ["patrol", "locateEnemy"]
+        self.currentCommand = self.commands[0]
+
+        self.index = 0
+
+    def update(self):
+        # Patrol action
+        if self.currentCommand == "patrol":
+            if self.currentFunc == "walk":
+                self.image = self.walk_slides[int(self.index)]
+                if self.index < len(self.walk_slides) - 1:
+                    self.index += 0.1
+                else:
+                    self.index = 0
+
+                if self.rect.midleft[0] > self.base_plat.rect.midleft[0]:
+                    self.rect.centerx -= 0.3
+                else:
+                    self.index = 0
+                    self.currentFunc = "invertWalk"
+                    self.update()
+            if self.currentFunc == "invertWalk":
+                self.image = self.invert_walk_slides[int(self.index)]
+                if self.index < len(self.invert_walk_slides) - 1:
+                    self.index += 0.1
+                else:
+                    self.index = 0
+
+                if self.rect.centerx < self.base_plat.rect.topright[0]:
+                    self.rect.centerx += 0.3
+                else:
+                    self.index = 0
+                    self.currentFunc = "walk"
+                    self.update()
 levels = [
     Level("earth.png", ("space", None), "neon-run.ogg", "platform_5.png", 10, 11, False, 0.15, 10, "Orbital Strike"),
-    Level("neon-city.png", ("neon", None), "extsong.ogg", "platform_4.png", 10, 15, False, 1, 30, "Neon City"),
+    Level("neon-city.png", ("neon", None), "extsong.ogg", "platform_4.png", 10, 15, False, 1, 30, "Neon City", zoomMode=True),
     Level("neon-landscape.png", ("neon", None), "neon-scape.ogg", "platform_4.png", 7, 5, False, 1, 30, "Neon outscape"),
     Level("volcano-dash.png", ("ground", "cloud.png"), "lava-run.ogg", "platform_5.png", 11, 5, False, 1, 30, "Huanuna Island"),
-    Level("planet-run.png", ("ground", "cloud.png"), "planet-run.ogg", "platform_5.png", 11, 7, False, 1, 30, "Exo Dash"),
+    Level("planet-run.png", ("ground", "cloud.png"), "planet-run.ogg", "platform_5.png", 11, 7, False, 1, 30, "Exo Dash", zoomMode=True),
     Level("candyland.png", ("candy", None), "candyland.ogg", "platform_1.png", 11, 5, False, 1, 30, "Candyland"),
     Level("overworld.png", ("ground", None), "overworld.ogg", "platform_5.png", 11, 5, False, 1, 30, "Overworld"),
     Level("pyramids.png", ("sand", "cloud.png"), "pyramid.ogg", "platform_0.png", 11, 5, False, 1, 30, "The Pyramids"),
@@ -610,26 +638,26 @@ levels = [
 ]
 
 multiplayerLevels = [
-    CoopLevel(("earthdual1.png", "earthdual2.png"), "space", "platform_5.png", "dual-BGMs/dual.ogg", 10, 0.3, 15,
+    CoopLevel("earthdual1.png", "space", "platform_5.png", "dual-BGMs/dual.ogg", 10, 0.3, 15,
               name="Satellite in Orbit"),
-    CoopLevel(("neon-dual1.png", "neon-dual2.png"), "neon", "platform_4.png", "dual-BGMs/neon-dual.ogg", 10, 1, 30,
+    CoopLevel("neon-dual1.png", "neon", "platform_4.png", "dual-BGMs/neon-dual.ogg", 10, 1, 30,
               name="Neon City"),
-    CoopLevel(("mars-dual1.png", "mars-dual2.png"), "space", "platform_5.png", "dual-BGMs/mars-dual.ogg", 10, 0.3, 15,
+    CoopLevel("mars-dual1.png", "space", "platform_5.png", "dual-BGMs/mars-dual.ogg", 10, 0.3, 15,
               name="The red planet"),
-    CoopLevel(("super-dual1.png", "super-dual2.png"), "neon", "platform_4.png", "dual-BGMs/super-dual.ogg", 10, 1, 30,
+    CoopLevel("super-dual1.png", "neon", "platform_4.png", "dual-BGMs/super-dual.ogg", 10, 1, 30,
               name="Microchip"),
-    CoopLevel(("nebula-dual1.png", "nebula-dual2.png"), "neon", "platform_4.png", "dual-BGMs/nebula-dual.ogg", 10, 1,
+    CoopLevel("nebula-dual1.png", "neon", "platform_4.png", "dual-BGMs/nebula-dual.ogg", 10, 1,
               30, name="The Nebula\'s hidden layer"),
-    CoopLevel(("exo-dual1.png", "exo-dual2.png"), "ground", "platform_5.png", "dual-BGMs/planet-dual.ogg", 10, 1, 30,
+    CoopLevel("exo-dual1.png", "ground", "platform_5.png", "dual-BGMs/planet-dual.ogg", 10, 1, 30,
               name="Exo-Planet run"),
-    CoopLevel(("candy-dual1.png", "candy-dual2.png"), "candy", "platform_1.png", "dual-BGMs/candy-dual.ogg", 10, 1, 30,
+    CoopLevel("candy-dual1.png", "candy", "platform_1.png", "dual-BGMs/candy-dual.ogg", 10, 1, 30,
               name="Sugar Rush"),
-    CoopLevel(("pyramids1.png", "pyramids2.png"), "sand", "platform_0.png", "dual-BGMs/pyramid-run.ogg", 10, 1, 30,
+    CoopLevel("pyramids1.png", "sand", "platform_0.png", "dual-BGMs/pyramid-run.ogg", 10, 1, 30,
               name="Pyramid Chase"),
-    CoopLevel(("AI-Demo1.png", "AI-Demo2.png"), "space", "platform_5.png", "dual-BGMs/ai-dual.ogg", 10, 0.3, 15,
-              name="AI Demo")
+    CoopLevel("AI-Demo1.png", "space", "platform_5.png", "dual-BGMs/ai-dual.ogg", 10, 0.3, 15,
+              name="AI Demo"),
+    CoopLevel("saturn.png", "space", "platform_5.png", "dual-BGMs/saturn.ogg", 10, 0.3, 15, name="Saturn\'s rings")
 ]
-
 
 def scanlines():
     if scanlineBool:
@@ -641,7 +669,7 @@ def scanlines():
 
 scanlines()
 
-def returnFrames(src, size):
+def returnFrames(src, size, transparency=False):
     slides = cv2.VideoCapture(src)
     imageList = []
 
@@ -651,8 +679,11 @@ def returnFrames(src, size):
             break
 
         shape = frame.shape[1::-1]
-        img = pygame.image.frombuffer(frame.tobytes(), shape, "BGR")
+        img = pygame.image.frombuffer(frame.tobytes(), shape, "BGR").convert_alpha()
         img = pygame.transform.scale(img, size)
+        if transparency:
+            img.set_colorkey((255, 255, 255))
+
         imageList.append(img)
 
     slides.release()
@@ -668,18 +699,25 @@ lvlSelect_Anim = returnFrames("backgrounds/levelSelect.gif", res)
 startup_1 = returnFrames("backgrounds/startup-1.gif", res)
 startup_2 = returnFrames("backgrounds/startup-2.gif", res)
 
+playersList = [
+    PlayerObject("wasp", 1),
+    PlayerObject("stingray", 1),
+    PlayerObject("red", 1),
+    PlayerObject("classic", 1)
+]
 
 def levelSelect(list, func):
 
     font = pygame.font.Font("fonts/pixelart.ttf", 20)
+    headerFont = pygame.font.Font("fonts/segaArt.ttf", 70)
 
-    fontcolor = (64, 125, 120)
+    fontColor = (64, 125, 120)
+    headerColor = (69, 129, 181)
 
     levelMenu = pygame.Surface((screen.get_width() * 2 // 3, screen.get_height()))
 
     menuRect = levelMenu.get_rect()
     menuRect.topleft = (screen.get_width() // 3, 0)
-
 
     cursor = font.render(">", BG2, (55, 255, 55))
     cursorRect = cursor.get_rect()
@@ -689,12 +727,38 @@ def levelSelect(list, func):
     prevRect = prevWin.get_rect()
     prevRect.topleft = (10, screen.get_height() // 4)
 
+    win1 = pygame.Surface((screen.get_width()//3, screen.get_height()))
+    win2 = pygame.Surface((win1.get_width(), win1.get_height()))
+
+    win1.fill((0, 0, 0))
+    win2.fill((0, 0, 0))
+
+    win1Rect = win1.get_rect()
+    win2Rect = win2.get_rect()
+
+    win1Rect.topleft = (0, 0)
+    win2Rect.topright = (screen.get_width(), 0)
+
+    win1Prev = pygame.Surface((160, 160))
+    win2Prev = pygame.Surface((win1Prev.get_width(), win1Prev.get_height()))
+
+    prev1Rect = win1Prev.get_rect()
+    prev2Rect = win2Prev.get_rect()
+
+    prev1Rect.center = win1Rect.center
+    prev2Rect.center = win2Rect.center
+
     lineList = []
     bgList = []
     diffList = []
 
-    p1 = font.render("Player 1:", BG2, fontcolor)
-    p2 = font.render("Player 2:", BG2, fontcolor)
+    playerSelect = Text("Select Character", (None, headerColor), headerFont, (screen.get_width()//2, 50))
+
+    player1 = Text("Player 1", (None, fontColor), font, (win1.get_width()//2, win1.get_height()//3))
+    player2 = Text("Player 2", (None, fontColor), font, (win2Rect.topleft[0] + win2.get_width()//2, win2.get_height()//3))
+
+    p1 = font.render("Player 1:", BG2, fontColor)
+    p2 = font.render("Player 2:", BG2, fontColor)
 
     header = font.render("AI On/Off", BG2, (131, 214, 153))
 
@@ -721,9 +785,12 @@ def levelSelect(list, func):
     p1Itr = 0
     p2Itr = 0
 
+    p1Object = None
+    p2Object = None
+
     i = 0
     for level in list:
-        tmp = font.render(level.name, BG2, fontcolor)
+        tmp = font.render(level.name, BG2, fontColor)
         tmpRect = tmp.get_rect()
 
         tmpRect.topleft = (20, i * tmp.get_height() + 5)
@@ -844,8 +911,89 @@ def levelSelect(list, func):
         clock.tick(30)
 
     run = True
+    selectPlayers = True
+
     if multiBool:
+        win1.set_alpha(125)
+        win2.set_alpha(125)
+
         index = 0
+
+        p1Index = 0
+        p2Index = 1
+
+        while selectPlayers:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    exit()
+                if event.type == pygame.KEYDOWN:
+                    keys = pygame.key.get_pressed()
+                    if keys[K_RIGHT]:
+                        p1Index += 1
+                    if keys[K_LEFT]:
+                        p1Index -= 1
+                    if keys[K_d]:
+                        p2Index += 1
+                    if keys[K_a]:
+                        p2Index -= 1
+                    if keys[K_RETURN]:
+                        p1Object = playersList[p1Index]
+                        p2Object = playersList[p2Index]
+
+                        selectPlayers = False
+                        break
+                    if keys[K_ESCAPE]:
+                        levelSelect(list, func)
+
+            if index >= len(lvlSelect_Anim) - 1:
+                index = 0
+                continue
+            else:
+                index += 1
+
+
+            bg = lvlSelect_Anim[index]
+
+            if p1Index > len(playersList) - 1:
+                p1Index = 0
+            if p1Index < 0:
+                p1Index = len(playersList) - 1
+
+            if p2Index > len(playersList) - 1:
+                p2Index = 0
+            if p2Index < 0:
+                p2Index = len(playersList) - 1
+
+            img1 = pygame.transform.scale(playersList[p1Index].image, win1Prev.get_size())
+            img2 = pygame.transform.scale(playersList[p2Index].image, win2Prev.get_size())
+
+            p1Name = Text(playersList[p1Index].name, (None, headerColor), font, (win1.get_width()//2, win1.get_height() * 2//3))
+            p2Name = Text(playersList[p2Index].name, (None, headerColor), font, (win2Rect.topleft[0] + win2.get_width()//2, win2.get_height() * 2//3))
+
+            win1Prev.blit(img1, (0, 0))
+            win2Prev.blit(img2, (0, 0))
+
+            screen.blit(bg, (0, 0))
+
+            screen.blit(win1, win1Rect)
+            screen.blit(win2, win2Rect)
+
+            screen.blit(win1Prev, prev1Rect)
+            screen.blit(win2Prev, prev2Rect)
+
+            screen.blit(p1Name.image, p1Name.rect)
+            screen.blit(p2Name.image, p2Name.rect)
+
+            screen.blit(playerSelect.image, playerSelect.rect)
+            screen.blit(player1.image, player1.rect)
+            screen.blit(player2.image, player2.rect)
+
+            scanlineGroup.draw(screen)
+
+            pygame.display.update()
+            clock.tick(30)
+
         while run:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -864,7 +1012,7 @@ def levelSelect(list, func):
                         pygame.mixer.music.load("songs/" + mainLevel.bgSong)
                         pygame.mixer.music.play(-1)
 
-                        func(mainLevel, p1_state[itrRow[0]], p2_state[itrRow[1]])
+                        func(mainLevel, p1_state[itrRow[0]], p2_state[itrRow[1]], p1Object, p2Object)
                         break
 
                     if keys[K_DOWN]:
@@ -941,14 +1089,42 @@ def levelSelect(list, func):
             scanlineGroup.draw(screen)
             pygame.display.update()
             clock.tick(30)
-def test_level():
-    base_plat = Platform(True, "platforms/ground/platform_5.png", None)
+def generate_terrain(base_plat, surface=screen, platDir="ground", length=20):
+    platgroup = pygame.sprite.Group()
+    platDecor = pygame.sprite.Group()
+
+    platgroup.add(base_plat)
+
+    for i in range(length):
+        tmp_plat = Platform(True, None, platDir, surface)
+        tmp_plat.rect.midleft = (platgroup.sprites()[-1].rect.midright[0] + 30, random.randint(screen.get_height()* 2//3, screen.get_height() - 30))
+
+        platgroup.add(tmp_plat)
+
+    index = 0
+    for i in platgroup.sprites():
+        if index % 5 == 0 and index != 0:
+            tmp_dec = PlatDecorations(i, None, platDir, surface)
+            platDecor.add(tmp_dec)
+        index += 1
+
+    return (platgroup, platDecor)
+
+def test_level(level):
+
+    global platforms
+    global decorations
+
+    terrain_sprites = pygame.sprite.Group()
+    enemy_sprites = pygame.sprite.Group()
+
+    base_plat = Platform(True, image=("platforms/" + level.platDir + "/" + level.startblock))
     base_plat.image = pygame.transform.scale(base_plat.image, (base_plat.image.get_width() * 3, base_plat.image.get_height() * 2))
 
     base_plat.rect = base_plat.image.get_rect()
     base_plat.rect.midleft = (0, screen.get_height())
 
-    testPlayer = Player()
+    testPlayer = Player(playersList[0])
     testPlayer.jumpGame = True
 
     testPlayer.rect.center = (screen.get_width()//2, 0)
@@ -958,14 +1134,39 @@ def test_level():
     for sprite in platforms:
         platforms.remove(sprite)
         sprite.kill()
+    for decor in decorations:
+        decorations.remove(decor)
+        decor.kill()
 
-    platforms.add(base_plat)
+    level.loadBG(screen)
 
-    bg = pygame.image.load("backgrounds/startup-1.gif")
-    bg = pygame.transform.scale(bg, res)
-
-    pygame.mixer.music.load("songs/Extras/south_island.ogg")
+    pygame.mixer.music.load("songs/" + level.bgSong)
     pygame.mixer.music.play(-1)
+
+    terrain = generate_terrain(base_plat, screen, length=80, platDir=level.platDir)
+    platforms, decorations = terrain
+
+    lastPlat = Platform(True, image=("platforms/" + level.platDir + "/" + level.startblock))
+    lastPlat.image = pygame.transform.scale(lastPlat.image, (lastPlat.image.get_width() * 3, lastPlat.image.get_height() * 2))
+
+    lastPlat.rect = lastPlat.image.get_rect()
+    lastPlat.rect.midleft = (platforms.sprites()[-1].rect.midright[0], base_plat.rect.midleft[1])
+
+    platforms.add(lastPlat)
+
+    tmp_enemy = Boss("overworldBoss", base_plat)
+
+    enemy_sprites.add(tmp_enemy)
+
+    for sprite in decorations.sprites():
+        terrain_sprites.add(sprite)
+
+    terrain_sprites.add(testPlayer)
+    terrain_sprites.add(tmp_enemy)
+
+
+    for sprite in platforms.sprites():
+        terrain_sprites.add(sprite)
 
     while True:
         for event in pygame.event.get():
@@ -975,15 +1176,36 @@ def test_level():
             if event.type == pygame.KEYDOWN:
                 key = pygame.key.get_pressed()
                 if key[K_ESCAPE]:
+
+                    for sprite in terrain_sprites:
+                        sprite.kill()
+                    platforms = pygame.sprite.Group()
+                    decorations = pygame.sprite.Group()
+
+                    players.remove(testPlayer)
+                    testPlayer.kill()
+
                     startScreen()
                     break
 
-        screen.blit(bg, (0, 0))
+        screen.blit(level.image, (0, 0))
 
-        players.update()
+        players.update(level.jumpForce, level.gravity)
+        enemy_sprites.update()
+        decorations.update()
 
-        players.draw(screen)
-        platforms.draw(screen)
+        if testPlayer.rect.midright[0] >= width * 5//6:
+            for sprite in terrain_sprites.sprites():
+                sprite.rect.centerx -= int(testPlayer.prevVel)
+        elif testPlayer.rect.midleft[0] <= width//6:
+            for sprite in terrain_sprites.sprites():
+                sprite.rect.centerx -= int(testPlayer.prevVel)
+
+        if testPlayer.rect.midtop[1] > screen.get_height() * 1.25:
+            gameOver()
+            break
+
+        terrain_sprites.draw(screen)
 
 
         scanlineGroup.draw(screen)
@@ -1016,7 +1238,7 @@ def main(tmpLvl):
     PlayerSpeed = tmpLvl.psd
 
     # defining player
-    p1 = Player()
+    p1 = Player(playersList[0])
     all_sprites.add(p1)
     players.add(p1)
 
@@ -1047,6 +1269,14 @@ def main(tmpLvl):
 
     # Creating font object
     sub = pygame.font.Font('fonts/pixelart.ttf', 25)
+
+    index = 0
+    if tmpLvl.zoomMode:
+        bgBottomLeft = tmpLvl.rect.bottomleft[1] + 50
+    else:
+        bgBottomLeft = tmpLvl.rect.bottomleft[1]
+
+    countVal = 1500
 
     while True:
 
@@ -1153,11 +1383,15 @@ def main(tmpLvl):
         # When players score divided by 100 gives a remainder of 0.
         # And if player score not zero its self
 
-        if p1.relpos.x % (70 * 100) // tmpLvl.factor == 0 and p1.relpos.x != 0:
+        if p1.relpos.x % (countVal) // tmpLvl.factor == 0 and p1.relpos.x != 0:
             PlayerSpeed += 1
 
-            # 1/chancenumber divided by 105/100
-            CHANCE //= 1.05
+            countVal -= 50
+            if countVal <= 50:
+                countVal = 250
+
+            # 1/chancenumber divided by 1005/1000
+            CHANCE //= 1.005
 
         if platnum % 20 == 0:
             new_decor = PlatDecorations(decor_plat, None, tmpLvl.platDir)
@@ -1180,6 +1414,8 @@ def main(tmpLvl):
 
         # to cover glitchy sprites
         screen.fill((0, 0, 0))
+
+        tmpLvl.rect.bottomleft = (int(index), int(bgBottomLeft))
 
         if tmpLvl.bg != None:
             screen.blit(tmpLvl.image, tmpLvl.rect)
@@ -1205,10 +1441,17 @@ def main(tmpLvl):
         # Refreshing screen
         pygame.display.update()
 
+        if tmpLvl.zoomMode:
+            index -= 0.2
+            if bgBottomLeft < screen.get_height() * 2//3 + screen.get_height():
+                bgBottomLeft += 0.1
+            else:
+                bgBottomLeft -= 0.1
+
         # Fixed Frame rate 110 recommended unless old computer
         clock.tick(FPS)
 
-def multiplayer(tmplvl, p1Mode, p2Mode):
+def multiplayer(tmplvl, p1Mode, p2Mode, p1Object, p2Object):
 
     aliens = pygame.sprite.Group()
     numberGroup = pygame.sprite.Group()
@@ -1241,15 +1484,15 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
     sc1Rect.topleft = (0, 0)
     sc2Rect.topleft = (0, height / 2)
 
-    tmplvl.loadBG(screen.get_size(), sc1.get_size())
+    tmplvl.loadBG(screen.get_size())
 
     # defining players
-    p1 = Player(surf=sc1, AIMode=p1Mode, sideLength=35)
+    p1 = Player(surf=sc1, AIMode=p1Mode, playerObject=p1Object, player1Bool=True)
     players.add(p1)
 
     p1Tag = PlayerTag(p1, "1")
 
-    p2 = Player2(sc2, AI_Mode=p2Mode, sideLength=35)
+    p2 = Player(surf=sc2, AIMode=p2Mode, playerObject=p2Object, player1Bool=False)
     players.add(p2)
 
     p2Tag = PlayerTag(p2, "2")
@@ -1280,13 +1523,23 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
     # Creating font object
     header = pygame.font.Font('fonts/segaArt.ttf', 100)
     sub = pygame.font.Font('fonts/pixelart.ttf', 25)
+    numberFont = pygame.font.Font("fonts/ka1.ttf", 150)
 
-    line1 = Text("Player 1: ", BG_FG_Color=(None, (150, 250, 150)), script=sub, pos=(0, 0))
-    line2 = Text("Player 2: ", BG_FG_Color=(None, (150, 250, 150)), script=sub, pos=(0, 0))
+    numbers = [
+        numberFont.render("3", BG2, (255, 55, 25)),
+        numberFont.render("2", BG2, (252, 186, 3)),
+        numberFont.render("1", BG2, (55, 255, 25)),
+        numberFont.render("GO!", BG2, (155, 255, 155))
+    ]
+
+    line1 = Text("Player 1 / " + p1.name + ": ", BG_FG_Color=(None, (150, 250, 150)), script=sub, pos=(0, 0))
+    line2 = Text("Player 2 / " + p2.name + ": ", BG_FG_Color=(None, (150, 250, 150)), script=sub, pos=(0, 0))
 
     line1.rect.topleft = (0, 0)
     line2.rect.topleft = line1.rect.bottomleft
 
+
+    started = False
     ended = False
     winner = None
     counter = 0
@@ -1294,9 +1547,16 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
     platnum = 0
     decor_plat = None
 
+    countVal = 500
+
+    index = 0
+
+
     while True:
 
         counter += PlayerSpeed
+
+        PlayerSpeed = int(PlayerSpeed)
 
         # PlayerSpeed And Distance Text
         ps1 = sub.render('Player Speed:', BG2, (55, 255, 55))
@@ -1375,10 +1635,14 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
                     delPlayer.kill()
                     break
 
-        if len(players.sprites()) < 2:
-            winner = players.sprites()[-1]
-            PlayerSpeed = 1
-            ended = True
+        if not ended:
+            if len(players.sprites()) < 2:
+                winner = players.sprites()[-1]
+                winner.AIMode = True
+                ended = True
+        else:
+            if PlayerSpeed > 2:
+                PlayerSpeed -= 0.07
         # if platform is out of screen or if there are more than 10 platforms then destroy
         i = 0
         for plat in platforms:
@@ -1403,8 +1667,12 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
                 aliens.add(alien)
                 all_sprites.add(alien)
 
-        if counter % (1000) // tmplvl.factor == 0 and counter != 0:
-            PlayerSpeed += 1
+        if started:
+            if counter % (countVal) // tmplvl.factor == 0 and counter != 0:
+                PlayerSpeed += 1
+                countVal -= 50
+                if countVal <= 50:
+                    countVal = 250
 
         # 1/chancenumber  = itself / 1.05
         CHANCE //= 1.05
@@ -1422,18 +1690,21 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
                 decorations.remove(decor)
                 decor.kill()
                 break
-
         for player in players.sprites():
             player.update(tmplvl.jumpForce, tmplvl.gravity)
+
         numberGroup.update()
         decorations.update()
-        aliens.update()
+
+        if started:
+            aliens.update()
+
 
         sc1.fill((0, 0, 0))
         sc2.fill((0, 0, 0))
 
         sc1.blit(tmplvl.image1, tmplvl.rect1)
-        sc2.blit(tmplvl.image2, tmplvl.rect2)
+        sc2.blit(tmplvl.image1, tmplvl.rect2)
 
         decorations.draw(sc1)
         decorations.draw(sc2)
@@ -1477,11 +1748,11 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
             CHANCE = 128
             PlayerSpeed = PSD
 
-            multiplayer(tmplvl, p1Mode, p2Mode)
+            multiplayer(tmplvl, p1Mode, p2Mode, p1Object, p2Object)
             startScreen()
 
         if ended:
-            win2 = sub.render(winner.name, BG2, (55, 155, 255))
+            win2 = sub.render("Player " + numberGroup.sprites()[-1].num, BG2, (55, 155, 255))
 
             win2Rect = win2.get_rect()
 
@@ -1520,7 +1791,7 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
                 winner.kill()
                 winner = None
 
-                multiplayer(tmplvl, p1Mode, p2Mode)
+                multiplayer(tmplvl, p1Mode, p2Mode, p1Object, p2Object)
                 startScreen()
             if p1Pad != None or p2Pad != None:
                 if p1Pad.get_button(1):
@@ -1548,8 +1819,26 @@ def multiplayer(tmplvl, p1Mode, p2Mode):
                     winner.kill()
                     winner = None
 
-                    multiplayer(tmplvl, p1Mode, p2Mode)
+                    multiplayer(tmplvl, p1Mode, p2Mode, p1Object, p2Object)
                     startScreen()
+        if not started:
+            if index >= len(numbers) - 1:
+                PlayerSpeed = 6
+            else:
+                PlayerSpeed = 0
+
+            if pygame.sprite.spritecollideany(p1, platforms) or pygame.sprite.spritecollideany(p2, platforms):
+                if index >= len(numbers):
+                    index = 0
+                    started = True
+                    continue
+
+                tmpNum = numbers[int(index)]
+                numRect = tmpNum.get_rect()
+                numRect.center = (screen.get_width()//2, screen.get_height()//2)
+
+                screen.blit(tmpNum, numRect)
+                index += 0.01
 
         scanlineGroup.draw(screen)
 
@@ -1683,7 +1972,7 @@ def startScreen():
     multi = sub.render('Multiplayer', BG2, COLOR)
     help = sub.render('Help', BG2, COLOR)
     exit = sub.render('Quit', BG2, COLOR)
-    extras = sub.render('Extras', BG2, COLOR)
+    extras = sub.render('Indev Levels', BG2, COLOR)
 
     cursor = sub.render('->', BG2, (100, 255, 100))
 
@@ -1790,18 +2079,37 @@ def startScreen():
                         firstEntry = False
                         multiBool = False
 
+                        pygame.mixer.music.stop()
+                        pygame.mixer.music.unload()
+
+                        pygame.mixer.music.load("songs/Extras/menu.ogg")
+                        pygame.mixer.music.play(-1)
+
                         levelSelect(levels, main)
                         break
                     elif y == my:
                         multiBool = True
                         firstEntry = False
+
+                        pygame.mixer.music.stop()
+                        pygame.mixer.music.unload()
+
+                        pygame.mixer.music.load("songs/Extras/menu.ogg")
+                        pygame.mixer.music.play(-1)
+
                         levelSelect(multiplayerLevels, multiplayer)
                         break
                     elif y == extrasRect.midleft[1]:
                         firstEntry = False
                         multiBool = False
 
-                        test_level()
+                        pygame.mixer.music.stop()
+                        pygame.mixer.music.unload()
+
+                        pygame.mixer.music.load("songs/Extras/menu.ogg")
+                        pygame.mixer.music.play(-1)
+
+                        levelSelect(levels, test_level)
                         break
 
                 if y == ey:
