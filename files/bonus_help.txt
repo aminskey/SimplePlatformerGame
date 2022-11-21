@@ -9,7 +9,7 @@ then you've come to the right place.
 This game is about 
 travelling the longest distance 
 withouth getting hit 
-by any sort of enemy obstacle.
+by any sort enemy obstacle.
 An enemy obstacle would be stuff like 
 lava, spike strips, seagulls 
 and red cubes.
