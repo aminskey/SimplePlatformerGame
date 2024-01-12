@@ -1,39 +1,30 @@
 # full imports
 import pygame, sys, random
-
-# import specific methods
 from pygame.locals import *
-from datetime import datetime
-from time import sleep, time
-from os import remove
-from warnings import filterwarnings
 
-# filter warning
-filterwarnings('ignore', category=DeprecationWarning)
-
-# initiate sound and graphics
+# initiate pygame library
 pygame.init()
-pygame.mixer.init()
 
 # Create FPS handler
 clock = pygame.time.Clock()
-
-# Resolution
-width = 800
-height = 600
+FPS = 60
 
 # resolution tuple
-res = (width, height)
+res = (800, 500)
+width, height = res
 
 # Game name
 name = 'Sky Dash'
+ver = '1.08'
 
 # Setting up window
-screen = pygame.display.set_mode(res)
+screen = pygame.display.set_mode(res, SCALED | FULLSCREEN)
 pygame.display.set_caption(name)
 
 # Sprite Groups
 clouds = pygame.sprite.Group()
+cloudsGroup1 = pygame.sprite.Group()
+cloudsGroup2 = pygame.sprite.Group()
 platforms = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 danger = pygame.sprite.Group()
@@ -41,58 +32,54 @@ players = pygame.sprite.Group()
 seagulls = pygame.sprite.Group()
 planes = pygame.sprite.Group()
 
-
-# Joystick config and init
-p1Stick = pygame.joystick.Joystick(-1)
-p1Stick.init()
-
 # text and screen background
 BG = (52, 164, 235)
 BG2 = (100, 100, 255)
+WHITE = (255, 255, 255)
+GREY = (150, 150, 150)
+BLACK = (0, 0, 0)
 
 # Invisible mouse
 pygame.mouse.set_visible(False)
 
 # Initial Player speed
-PSD = 4
+PSD = 8
 
 # player speed
 PlayerSpeed = PSD
 
-CHANCE = 256
+RATE = 124
 # 1/256 = 0.25% chance of lava block
-
-FPS = 110
 
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
 highscore = vec(0, 0)
 
+# Are you playing the game for the first time?!?!?
+firstTime = True
+
 # Clouds Class
 class Clouds(pygame.sprite.Sprite):
 	# General settings
-	def __init__(self, pos):
+	def __init__(self, image="backgroundObjects/cloud.png", pos=(0, 0)):
 		super().__init__()
 
-		self.image = pygame.image.load('backgroundObjects/cloud.png')
+		self.image = pygame.image.load(image)
 		self.rect = self.image.get_rect()
 
 		self.rect.center = pos
+		self.min = 0
+		self.max = height
 
 	# Make them move in the air
-	def update(self):
-		x, y = self.rect.center
+	def update(self, speed=1):
 
 		# if out of window then respawn ahead of widthspan
-		if x < -self.image.get_width() - 10:
-			random.seed(datetime.now())
-			x = width + self.image.get_width() + 10
-			y = random.randrange(0, height)
+		if self.rect.midright[0] < 0:
+			self.rect.midleft = (width, random.randrange(self.min, self.max))
 
 		# slowly drift backwards creating virtual effect
-		x-=1
-
-		self.rect.center = (x, y)
+		self.rect.x -= speed
 
 # platform mechanism
 class Platform(pygame.sprite.Sprite):
@@ -113,7 +100,7 @@ class Platform(pygame.sprite.Sprite):
 
 		# General settings
 		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width * 1.25, width * 2.5), random.randrange(height * 8//12, height * 5//6))
+		self.rect.midleft = (screen.get_width(), random.randrange(height * 8//12, height * 5//6))
 		self.pos = vec((self.rect.center))
 
 # Seagulls class
@@ -125,17 +112,13 @@ class Seagull(pygame.sprite.Sprite):
 		self.image = pygame.image.load('badObjects/seagull.png')
 
 		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width, width * 2), random.randrange(height * 1//6, height * 5//24))
-
-		self.x, self.y = self.rect.center
+		self.rect.topleft = (random.randrange(width, width * 2), random.randrange(0, height//6))
 
 	# Update mechanism
 	def update(self):
-		self.x -= PlayerSpeed * 1.15
-		self.rect.center = (self.x, self.y)
-
+		self.rect.x -= PlayerSpeed * 1.15
 		# if seagull out of screen then kill it
-		if self.x < 0:
+		if self.rect.midleft[0] < 0:
 			all_sprites.remove(self)
 			danger.remove(self)
 			seagulls.remove(self)
@@ -153,7 +136,7 @@ class Plane(pygame.sprite.Sprite):
 		self.image.set_alpha(alpha)
 
 		self.rect = self.image.get_rect()
-		self.rect.center = (random.randrange(width * 1.5, width * 2.5), random.randrange(0, height * 2//3))
+		self.rect.center = (random.randint(width * 5//4, width * 3//2), random.randrange(0, height * 2//3))
 
 		self.x, self.y = self.rect.center
 
@@ -161,7 +144,6 @@ class Plane(pygame.sprite.Sprite):
 		self.x -= speed
 
 		if self.x < 0 - self.image.get_width():
-			random.seed(datetime.now())
 			self.x = width + self.image.get_width()
 			self.y = random.randrange(0, height * 2//3)
 
@@ -179,98 +161,59 @@ class Player(pygame.sprite.Sprite):
 		self.image.fill((120, 255, 120))
 
 		self.rect = self.image.get_rect()
-
 		self.rect.center = (width//2, 0)
 
-		self.acc = 1
+		self.acc = 1.75
+		self.vel_y = 0
 		self.relpos = vec(self.rect.center)
 
-
 		self.jumpstate = True
+		self.isStuck = False
 
 	# Jump mechanism
-	def jump(self):
-
-		x, y = self.rect.center
-
-
-		# key mapping
-		keys = pygame.key.get_pressed()
-		mkeys = pygame.mouse.get_pressed()
-
-
-		# Event handling
-		if keys[K_SPACE] or mkeys[0] or p1Stick.get_button(0):
-
-			# jumping
-			y -= 20
-
-		# Updating position
-		self.rect.center = (x, y)
-
+	def jump(self, jumpSpeed = 25):
+		self.vel_y = -jumpSpeed
 	# Gravity mechanism
 	def gravity(self):
-
-		x, y = self.rect.center
-
 		# checking for collision
 		# If not then continue falling and updating position
-		if not pygame.sprite.spritecollide(self, platforms, False):
-			y += self.acc
-			self.acc += 0.4
-
-			self.rect.center = (x, y)
-		# else stop and update position
-		else:
-			self.acc = 0
-			self.rect.center = (x, y)
-
+		if self.vel_y < 15:
+			self.vel_y += self.acc
 
 
 	# The Update mechanism
 	def update(self):
-
-		x, y = self.rect.midtop
-
-		# Creating bounding box
-		if x > width * 2//3:
-			x = width * 2//3
-
-		# Updating Position
-		self.rect.midtop = (x, y)
-
+		self.rect.y += self.vel_y
 
 		# Checking for collision
-		if pygame.sprite.spritecollide(self, platforms, False):
+		if pygame.sprite.spritecollideany(self, platforms):
+			if self.jumpstate:
+				self.vel_y = 0
+			self.jumpstate = False
 
-			plats = pygame.sprite.spritecollide(self, platforms, False)
-			plat = plats[-1]
-			platx, platy = plat.rect.midtop
-
-			plat_w = plat.image.get_width()
-			plat_h = plat.image.get_height()
-
+			plat = pygame.sprite.spritecollideany(self, platforms)
 			# If player collides with platform and is deep in the block
 			# Then stop all motion except for jumping mechanism
-			if y > platy and x > (platx + plat_w * 1//3) and x < (platx + plat_w * 2//3):
-				self.jumpstate = False
-				self.rect.midtop = (platx, y)
-			else:
-				self.jumpstate = True
+			if self.rect.centery < plat.rect.midbottom[1] and self.rect.centery > plat.rect.midtop[1]:
+				self.rect.x -= PlayerSpeed
+				self.isStuck = True
+		else:
+			self.gravity()
+			self.jumpstate = True
+			self.isStuck = False
 
+		if not self.isStuck:
+			# if the player is not at the center of the screen
+			# Then move it towards the center
+			if screen.get_rect().centerx - self.rect.centerx > 0:
+				self.rect.centerx += 2
 
 		# Updating relative position
 		self.relpos.x += PlayerSpeed
 
-		# If not in air allow jump mechanism
-		if self.jumpstate:
-			self.jump()
-
-		# Running virtual gravity method
-		self.gravity()
 
 # ScoreLine class
-class HighScoreLine(Player):
+class HighScoreLine(pygame.sprite.Sprite):
 	def __init__(self):
 		super().__init__()
 
@@ -282,13 +225,35 @@ class HighScoreLine(Player):
 		self.rect = self.image.get_rect()
 		self.rect.center = (highscore.x, height/2)
 		self.x, self.y = self.rect.center
+class Text(pygame.sprite.Sprite):
+	def __init__(self, msg, script, col, pos=(0, 0), shadow=None):
+		super().__init__()
+		if not isinstance(shadow, tuple):
+			self.image = script.render(msg, None, col)
+		else:
+			tmp = script.render(msg, None, col)
+			s_text = script.render(msg, None, BLACK)
+			self.image = pygame.Surface((tmp.get_width() + shadow[0], tmp.get_height() + shadow[1]))
+			self.image.fill((1, 0, 2))
+			self.image.set_colorkey((1, 0, 2))
+
+			self.image.blit(s_text, shadow)
+			self.image.blit(tmp, (0, 0))
+
+		self.rect = self.image.get_rect()
+
+		self.rect.center = pos
 
 def main():
-	# choosing random background song.
-	pygame.mixer.music.load('songs/song-' + str(random.randint(0, 5)) +'.ogg')
-	sleep(0.25)
-	for i in range(8):
-		pygame.mixer.music.queue('songs/song-' + str(random.randint(0, 5)) +'.ogg')
+
+	fgClouds = pygame.sprite.Group()
+
+	# Importing global variables
+	global highscore
+	global PlayerSpeed
+	global firstTime
+
+	CHANCE = RATE
 
 	# planes in the background
 	for i in range(2):
@@ -298,29 +263,10 @@ def main():
 			planes.add(new_plane)
 			all_sprites.add(new_plane)
 
-	# Creating background clouds
-	for i in range(20):
-		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
-
-		if not pygame.sprite.spritecollide(new_cloud, clouds, False):
-			clouds.add(new_cloud)
-			all_sprites.add(new_cloud)
-
-	for i in range(2):
-		new_plane = Plane(random.randrange(200, 255))
-
-		if not pygame.sprite.spritecollide(new_plane, planes, False):
-			planes.add(new_plane)
-			all_sprites.add(new_plane)
-
-	# Importing global variables
-	global highscore
-	global PlayerSpeed
-	global CHANCE
-
 	# Creating scoreLine
 	scoreLine = HighScoreLine()
-	all_sprites.add(scoreLine)
+	if not firstTime:
+		all_sprites.add(scoreLine)
 
 	# defining player
 	p1 = Player()
@@ -339,15 +285,38 @@ def main():
 	platforms.add(plat1)
 	all_sprites.add(plat1)
 
-	# loop the background music
-	pygame.mixer.music.play(0, 0)
-
-
 	# Creating Fixed Plane speed
 	PlaneSpeed = random.randrange(2, 4)
 
 	# Creating font object
 	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
+
+	# choosing random background song.
+	pygame.mixer.music.load('BGM/main.ogg')
+	pygame.mixer.music.play(-1)
+
+	count = 0
+
+	for i in range(random.randint(20, 50)):
+		if i < 5:
+			tmp = Clouds("platforms/platform_2.png")
+			tmp.rect.midleft = (random.randrange(width, width*2), random.randrange(height//2, height))
+			tmp.image.set_alpha(25)
+
+			tmp.min = height//2
+			tmp.max = height * 3//4
+
+			fgClouds.add(tmp)
+			clouds.add(tmp)
+		else:
+			tmp = Clouds(pos=(random.randrange(0, width), random.randrange(0, height)))
+			if i % 2 == 0:
+				tmp.image.set_alpha(150)
+				cloudsGroup1.add(tmp)
+			else:
+				cloudsGroup2.add(tmp)
+			clouds.add(tmp)
+
 
 	while True:
 
@@ -375,8 +344,6 @@ def main():
 		hs1Rect.center = (width * 6//16, hs1.get_height())
 		hs2Rect.center = (width * 11//16, hs2.get_height())
 
-
-
 		# HUD Player text
 		score1 = sub.render('Player Score', BG2, (55,55,255))
 		score2 = sub.render(str(p1.relpos.x//100), BG2, (55,55,255))
@@ -387,14 +354,17 @@ def main():
 
 		# Positioning text
 		score1Rect.center = (width * 6//16, score1.get_height()*2)
-		score2Rect.center = (width  * 11//16, score2.get_height()*2)
+		score2Rect.center = (width * 11//16, score2.get_height()*2)
 
 		# Window event handler
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
-
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				if not p1.jumpstate:
+					p1.jump()
+				break
 
 		screen.fill(BG)
 
@@ -403,10 +373,7 @@ def main():
 		# Making the platforms move to create an illusion
 		# That the player is moving
 		for plat in platforms:
-			px, py = plat.rect.center
-			px -= PlayerSpeed
-			plat.rect.center = (px, py)
-
+			plat.rect.centerx -= PlayerSpeed
 
 		# if player's x is greater than highscore bar's x
 		# Then update it
@@ -415,18 +382,16 @@ def main():
 
 
 		# Put in for loop for user to increase game intensity
-		for i in range(1):
+		if count % random.randint(3, 6) == 0:
 			# randomizing chance
 			# same logic as the seagull (l. 399) but with lava blocks
 			# but not dependent on distance
-			random.seed(datetime.now())
-
 			choice = random.randint(0, CHANCE)
 
 			if choice == 0:
 				new_plat = Platform(False)
 				danger.add(new_plat)
-			else :
+			else:
 				new_plat = Platform(True)
 
 
@@ -443,6 +408,17 @@ def main():
 		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False) or x < 0:
 			PlayerSpeed = PSD
 			CHANCE = 128
+			if firstTime:
+				firstTime = False
+
+			pygame.event.clear()
+			for sprite in all_sprites.sprites():
+				sprite.kill()
+			for sprite in clouds.sprites():
+				sprite.kill()
+			for sprite in fgClouds.sprites():
+				sprite.kill()
+
 			gameOver(p1, highscore)
 
 		# if platform is out of screen or if there are more than 10 platforms then destroy
@@ -479,10 +455,10 @@ def main():
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
 
-		if p1.relpos.x % 2000 == 0 and p1.relpos.x != 0:
+		if p1.relpos.x % 1000 == 0 and p1.relpos.x != 0:
 			PlayerSpeed += 1
 
-		# 1/chancenumber divided by 105/100
+			# 1/chancenumber divided by 105/100
 			CHANCE //=1.05
 
 
@@ -493,11 +469,15 @@ def main():
 		# Updating sprite groups
 		planes.update(PlaneSpeed)
 		clouds.update()
+		fgClouds.update(PlayerSpeed + 1)
 		seagulls.update()
 		p1.update()
 
 		# Drawing all sprites to screen
+		cloudsGroup1.draw(screen)
+		cloudsGroup2.draw(screen)
 		all_sprites.draw(screen)
+		fgClouds.draw(screen)
 
 		# Sending Highscore and player score data to screen
 		screen.blit(hs1, hs1Rect)
@@ -514,116 +494,67 @@ def main():
 
 		# Fixed Frame rate 120 recommended unless old computer
 		clock.tick(FPS)
+		count += 1
 
 	pygame.mixer.music.unload()
 
 def startScreen():
 
-	pygame.mixer.music.load('songs/startup.ogg')
-
+	pygame.mixer.music.load('BGM/startup.ogg')
 	header = pygame.font.Font('fonts/pixelart.ttf', 50)
 	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
+	h2 = pygame.font.Font('fonts/pixelart.ttf', 30)
 
-	title = header.render(name, BG, (230, 230, 230))
-	start = sub.render('Start', BG, (230, 230, 230))
-	exit = sub.render('Quit', BG, (230, 230, 230))
 
-	cursor = sub.render('->', BG, (100, 255, 100))
+	title = Text(name, header, WHITE, (screen.get_rect().centerx, screen.get_height()//3), (2, 3))
+	subtitle = Text(ver, h2, WHITE)
+	start = Text("Press to start", sub, WHITE, screen.get_rect().center, (2, 3))
 
-	titleRect = title.get_rect()
-
-	startRect = start.get_rect()
-	exitRect = exit.get_rect()
-
-	cursorRect = cursor.get_rect()
-
-	titleRect.center = (width/2, height * 1//3)
-
-	startRect.center = (width/2, height * 1//2 - 10)
-	exitRect.center = (width/2, height * 1//2 + 10)
-
-	cursorRect.center = (width//2 - 50, height * 1//2 - 10)
-
-	x, y = cursorRect.center
-
-	sx, sy = startRect.center
-	ex, ey = exitRect.center
-
-	cloudsGroup1 = pygame.sprite.Group()
-	cloudsGroup2 = pygame.sprite.Group()
+	subtitle.rect.midtop = title.rect.midbottom
 
 	for i in range(30):
-		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
+		new_cloud = Clouds(pos=(random.randrange(0, width), random.randrange(0, height)))
 
-		if not pygame.sprite.spritecollide(new_cloud, cloudsGroup1, False):
-			cloudsGroup1.add(new_cloud)
-
-	sleep(0.125)
-
-	for i in range(10):
-		new_cloud = Clouds((random.randrange(0, width), random.randrange(0, height)))
-
-		if not pygame.sprite.spritecollide(new_cloud, cloudsGroup2, False):
-			cloudsGroup2.add(new_cloud)
+		if not pygame.sprite.spritecollideany(new_cloud, cloudsGroup1):
+			if i % 2 == 0:
+				new_cloud.image.set_alpha(100)
+				cloudsGroup1.add(new_cloud)
+			else:
+				new_cloud.image.set_alpha(200)
+				cloudsGroup2.add(new_cloud)
+			clouds.add(new_cloud)
 
 	pygame.mixer.music.play(-1, 0)
 	while True:
 
 		for event in pygame.event.get():
-			key = pygame.key.get_pressed()
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
-			if event.type == KEYDOWN or event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYAXISMOTION:
-
-				if key[K_UP] or p1Stick.get_axis(0) > 0.1:
-					y -= 20
-				if key[K_DOWN] or p1Stick.get_axis(0) < -0.1:
-					y += 20
-
-				if key[K_RETURN] or p1Stick.get_button(0):
-					if y == ey:
-						pygame.mixer.music.stop()
-						pygame.quit()
-						sys.exit()
-					elif y == sy:
-						pygame.mixer.music.stop()
-						main()
-						break
-
-				if y > ey:
-					y = sy
-				if y < sy:
-					y = ey
-
-
-
-
-
-
-		cursorRect.center = (x, y)
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				for sprite in cloudsGroup2.sprites():
+					sprite.kill()
+				for sprite in cloudsGroup1.sprites():
+					sprite.kill()
+				main()
+				exit()
 
 		screen.fill(BG)
 
+		cloudsGroup1.update(2)
+		cloudsGroup2.update(2)
+
 		cloudsGroup1.draw(screen)
-		cloudsGroup1.update()
-
-		screen.blit(title, titleRect)
-		screen.blit(start, startRect)
-		screen.blit(exit, exitRect)
-		screen.blit(cursor, cursorRect)
-
+		screen.blit(title.image, title.rect)
+		screen.blit(subtitle.image, subtitle.rect)
+		screen.blit(start.image, start.rect)
 		cloudsGroup2.draw(screen)
-		cloudsGroup2.update()
-
 
 		pygame.display.update()
 		clock.tick(FPS)
 
 
 def gameOver(p1, highscore):
-
-
 	pygame.mixer.music.load('sounds/gameOver.ogg')
 	if p1.relpos.x >= highscore.x:
 		highscore.x = p1.relpos.x
@@ -652,13 +583,10 @@ def gameOver(p1, highscore):
 
 	pygame.mixer.music.play(0, 0)
 	pygame.display.flip()
-	sleep(0.75)
-
 
 	while True:
 		for event in pygame.event.get():
-			if event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
-				sleep(0.25)
+			if event.type == pygame.MOUSEBUTTONUP:
 				for sprite in all_sprites:
 					sprite.kill()
 				startScreen()
@@ -666,7 +594,5 @@ def gameOver(p1, highscore):
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
-
-		pygame.display.flip()
 
 startScreen()
