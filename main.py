@@ -1,5 +1,5 @@
 # full imports
-import pygame, sys, random
+import pygame, sys, random, os
 from pygame.locals import *
 
 # initiate pygame library
@@ -10,16 +10,20 @@ clock = pygame.time.Clock()
 FPS = 60
 
 # resolution tuple
-res = (800, 500)
+res = (800, 450)
 width, height = res
 
 # Game name
 name = 'Sky Dash'
-ver = '1.08'
+ver = '1.8.2'
 
 # Setting up window
 screen = pygame.display.set_mode(res, SCALED | FULLSCREEN)
 pygame.display.set_caption(name)
+
+# get working directory
+cwd = os.getcwd()
+print(cwd)
 
 # Sprite Groups
 clouds = pygame.sprite.Group()
@@ -64,7 +68,7 @@ class Clouds(pygame.sprite.Sprite):
 	def __init__(self, image="backgroundObjects/cloud.png", pos=(0, 0)):
 		super().__init__()
 
-		self.image = pygame.image.load(image)
+		self.image = pygame.image.load(f"{cwd}/{image}")
 		self.rect = self.image.get_rect()
 
 		self.rect.center = pos
@@ -92,9 +96,9 @@ class Platform(pygame.sprite.Sprite):
 		# if not landable then use lava block image.
 		if image == None:
 			if Landable:
-				self.image = pygame.image.load('platforms/platform_' + str(random.randint(0, 2)) + '.png')
+				self.image = pygame.image.load(f'{cwd}/platforms/platform_' + str(random.randint(0, 2)) + '.png')
 			else:
-				self.image = pygame.image.load('badObjects/lavablock.png')
+				self.image = pygame.image.load(f'{cwd}/badObjects/lavablock.png')
 		else:
 			self.image = pygame.image.load(image)
 
@@ -109,7 +113,7 @@ class Seagull(pygame.sprite.Sprite):
 	def __init__(self):
 		super().__init__()
 
-		self.image = pygame.image.load('badObjects/seagull.png')
+		self.image = pygame.image.load(f'{cwd}/badObjects/seagull.png')
 
 		self.rect = self.image.get_rect()
 		self.rect.topleft = (random.randrange(width, width * 2), random.randrange(0, height//6))
@@ -131,7 +135,7 @@ class Plane(pygame.sprite.Sprite):
 	def __init__(self, alpha):
 		super().__init__()
 
-		self.image = pygame.image.load('backgroundObjects/planes-' + str(random.randrange(0, 1)) + '.png')
+		self.image = pygame.image.load(f'{cwd}/backgroundObjects/planes-' + str(random.randrange(0, 1)) + '.png')
 
 		self.image.set_alpha(alpha)
 
@@ -245,7 +249,6 @@ class Text(pygame.sprite.Sprite):
 		self.rect.center = pos
 
 def main():
-
 	fgClouds = pygame.sprite.Group()
 
 	# Importing global variables
@@ -274,7 +277,7 @@ def main():
 	players.add(p1)
 
 	# Defining ground platform
-	plat1 = Platform(True, 'platforms/platform_0.png')
+	plat1 = Platform(True, f'{cwd}/platforms/platform_0.png')
 
 	# Customizing platform
 	plat1.image = pygame.transform.scale(plat1.image, (width, plat1.image.get_height()))
@@ -289,17 +292,17 @@ def main():
 	PlaneSpeed = random.randrange(2, 4)
 
 	# Creating font object
-	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
+	sub = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 25)
 
 	# choosing random background song.
-	pygame.mixer.music.load('BGM/main.ogg')
+	pygame.mixer.music.load(f'{cwd}/BGM/main.ogg')
 	pygame.mixer.music.play(-1)
 
 	count = 0
 
 	for i in range(random.randint(20, 50)):
 		if i < 5:
-			tmp = Clouds("platforms/platform_2.png")
+			tmp = Clouds(f"platforms/platform_2.png")
 			tmp.rect.midleft = (random.randrange(width, width*2), random.randrange(height//2, height))
 			tmp.image.set_alpha(25)
 
@@ -494,16 +497,14 @@ def main():
 
 		# Fixed Frame rate 120 recommended unless old computer
 		clock.tick(FPS)
+		print(clock.get_fps())
 		count += 1
 
-	pygame.mixer.music.unload()
-
 def startScreen():
-
-	pygame.mixer.music.load('BGM/startup.ogg')
-	header = pygame.font.Font('fonts/pixelart.ttf', 50)
-	sub = pygame.font.Font('fonts/pixelart.ttf', 25)
-	h2 = pygame.font.Font('fonts/pixelart.ttf', 30)
+	pygame.mixer.music.load(f'{cwd}/BGM/startup.ogg')
+	header = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 50)
+	sub = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 25)
+	h2 = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 30)
 
 
 	title = Text(name, header, WHITE, (screen.get_rect().centerx, screen.get_height()//3), (2, 3))
@@ -531,7 +532,7 @@ def startScreen():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
-			if event.type == pygame.MOUSEBUTTONDOWN:
+			if event.type == pygame.MOUSEBUTTONUP:
 				for sprite in cloudsGroup2.sprites():
 					sprite.kill()
 				for sprite in cloudsGroup1.sprites():
@@ -555,15 +556,15 @@ def startScreen():
 
 
 def gameOver(p1, highscore):
-	pygame.mixer.music.load('sounds/gameOver.ogg')
+	pygame.mixer.music.load(f'{cwd}/sounds/gameOver.ogg')
 	if p1.relpos.x >= highscore.x:
 		highscore.x = p1.relpos.x
 
 
 	pygame.mixer.music.stop()
 
-	header = pygame.font.Font('fonts/pixelart.ttf', 40)
-	sub = pygame.font.Font('fonts/pixelart.ttf', 20)
+	header = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 40)
+	sub = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 20)
 
 	text = header.render('Game Over: ' + str(p1.relpos.x//100), BG, (255, 255, 255))
 	text2 = sub.render('Press anything to continue', BG, (255, 255, 255))
@@ -594,5 +595,5 @@ def gameOver(p1, highscore):
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
-
-startScreen()
+if __name__ == "__main__":
+	startScreen()
