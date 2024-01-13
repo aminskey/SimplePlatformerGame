@@ -10,7 +10,7 @@ clock = pygame.time.Clock()
 FPS = 60
 
 # resolution tuple
-res = (800, 475)
+res = (800, 430)
 width, height = res
 
 # Game name
@@ -34,7 +34,6 @@ all_sprites = pygame.sprite.Group()
 danger = pygame.sprite.Group()
 players = pygame.sprite.Group()
 seagulls = pygame.sprite.Group()
-planes = pygame.sprite.Group()
 
 # text and screen background
 BG = (52, 164, 235)
@@ -129,32 +128,6 @@ class Seagull(pygame.sprite.Sprite):
 			seagulls.remove(self)
 
 			self.kill()
-
-# Planes Class
-class Plane(pygame.sprite.Sprite):
-	# Initial settings
-	def __init__(self, alpha):
-		super().__init__()
-
-		self.image = pygame.image.load(f'{cwd}/backgroundObjects/planes-' + str(random.randrange(0, 1)) + '.png')
-
-		self.image.set_alpha(alpha)
-
-		self.rect = self.image.get_rect()
-		self.rect.center = (random.randint(width * 5//4, width * 3//2), random.randrange(0, height * 2//3))
-
-		self.x, self.y = self.rect.center
-
-	def update(self, speed):
-		self.x -= speed
-
-		if self.x < 0 - self.image.get_width():
-			self.x = width + self.image.get_width()
-			self.y = random.randrange(0, height * 2//3)
-
-
-		self.rect.center = (self.x, self.y)
-
 
 # Player class
 class Player(pygame.sprite.Sprite):
@@ -260,14 +233,6 @@ def main():
 
 	CHANCE = RATE
 
-	# planes in the background
-	for i in range(2):
-		new_plane = Plane(random.randrange(200, 255))
-
-		if not pygame.sprite.spritecollide(new_plane, planes, False):
-			planes.add(new_plane)
-			all_sprites.add(new_plane)
-
 	# Creating scoreLine
 	scoreLine = HighScoreLine()
 	if not firstTime:
@@ -290,9 +255,6 @@ def main():
 	platforms.add(plat1)
 	all_sprites.add(plat1)
 
-	# Creating Fixed Plane speed
-	PlaneSpeed = random.randrange(2, 4)
-
 	# Creating font object
 	sub = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 25)
 
@@ -302,7 +264,7 @@ def main():
 
 	count = 0
 
-	for i in range(random.randint(20, 50)):
+	for i in range(random.randint(7, 30)):
 		if i < 5:
 			tmp = Clouds(f"platforms/platform_2.png")
 			tmp.rect.midleft = (random.randrange(width, width*2), random.randrange(height//2, height))
@@ -330,8 +292,8 @@ def main():
 		curr_Score = Text(f"Current Highscore: {int(highscore.x//100)}", sub, DARK_BLUE, shadow=(3, 2))
 
 		curr_Score.rect.midtop = screen.get_rect().midtop
-		pSpeed.rect.midtop = curr_Score.rect.midbottom
-		pScore.rect.midtop = pSpeed.rect.midbottom
+		pScore.rect.midtop = curr_Score.rect.midbottom
+		pSpeed.rect.midtop = pScore.rect.midbottom
 
 
 		# Window event handler
@@ -445,7 +407,6 @@ def main():
 
 
 		# Updating sprite groups
-		planes.update(PlaneSpeed)
 		clouds.update()
 		fgClouds.update(PlayerSpeed + 1)
 		seagulls.update()
