@@ -15,7 +15,7 @@ width, height = res
 
 # Game name
 name = 'Sky Dash'
-ver = '1.8.2'
+ver = '1.8.3'
 
 # Setting up window
 screen = pygame.display.set_mode(res, SCALED | FULLSCREEN)
@@ -41,10 +41,11 @@ BG2 = (100, 100, 255)
 WHITE = (255, 255, 255)
 GREY = (150, 150, 150)
 BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)
 DARK_BLUE = (55,55,255)
 
 # Invisible mouse
-pygame.mouse.set_visible(False)
+#pygame.mouse.set_visible(False)
 
 # Initial Player speed
 PSD = 8
@@ -128,6 +129,15 @@ class Seagull(pygame.sprite.Sprite):
 			seagulls.remove(self)
 
 			self.kill()
+
+# Button Class
+class Button(pygame.sprite.Sprite):
+	def __init__(self, image, pos=(0, 0)):
+		self.image = pygame.image.load(f"{cwd}/{image}")
+		self.rect = self.image.get_rect()
+		self.activated = False
+
+		self.rect.center = pos
 
 # Player class
 class Player(pygame.sprite.Sprite):
@@ -223,6 +233,38 @@ class Text(pygame.sprite.Sprite):
 
 		self.rect.center = pos
 
+def pause():
+	shade = pygame.Surface(screen.get_size())
+	shade.fill(BLACK)
+	shade.set_alpha(200)
+
+	title = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 55)
+	subfont = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 35)
+
+	pauseMsg = Text("Paused", title, GREEN, shadow=(3, 1))
+	subtitle = Text("Press to continue", subfont, GREEN, shadow=(3, 1))
+
+	pauseMsg.rect.midbottom = screen.get_rect().center
+	subtitle.rect.midtop = pauseMsg.rect.midbottom
+
+	screen.blit(shade, (0, 0))
+	screen.blit(pauseMsg.image, pauseMsg.rect)
+	screen.blit(subtitle.image, subtitle.rect)
+
+	i=0
+	pygame.event.clear()
+	while True:
+		for event in pygame.event.get():
+			if event.type == QUIT:
+				pygame.quit()
+				exit()
+			if event.type == MOUSEBUTTONUP:
+				if i > FPS//4:
+					return
+		i += 1
+		clock.tick(FPS)
+		pygame.display.update()
+
 def main():
 	fgClouds = pygame.sprite.Group()
 
@@ -262,8 +304,14 @@ def main():
 	pygame.mixer.music.load(f'{cwd}/BGM/main.ogg')
 	pygame.mixer.music.play(-1)
 
+	# frameCounter
 	count = 0
 
+	# Pause Button
+	pause_btn = Button("misc/pause_btn.png")
+	pause_btn.rect.topright = screen.get_rect().topright
+
+	# Generating foreground and background clouds
 	for i in range(random.randint(7, 30)):
 		if i < 5:
 			tmp = Clouds(f"platforms/platform_2.png")
@@ -302,6 +350,10 @@ def main():
 				pygame.quit()
 				sys.exit()
 			if event.type == pygame.MOUSEBUTTONDOWN:
+				point = pygame.mouse.get_pos()
+				if pause_btn.rect.collidepoint(point):
+					pause()
+					break
 				if not p1.jumpstate:
 					p1.jump()
 				break
@@ -422,6 +474,9 @@ def main():
 		screen.blit(pSpeed.image, pSpeed.rect)
 		screen.blit(pScore.image, pScore.rect)
 		screen.blit(curr_Score.image, curr_Score.rect)
+
+		# Printing pause button
+		screen.blit(pause_btn.image, pause_btn.rect)
 
 		# Refreshing screen
 		pygame.display.update()
