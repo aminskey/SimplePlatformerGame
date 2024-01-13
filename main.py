@@ -10,7 +10,7 @@ clock = pygame.time.Clock()
 FPS = 60
 
 # resolution tuple
-res = (800, 450)
+res = (800, 475)
 width, height = res
 
 # Game name
@@ -42,6 +42,7 @@ BG2 = (100, 100, 255)
 WHITE = (255, 255, 255)
 GREY = (150, 150, 150)
 BLACK = (0, 0, 0)
+DARK_BLUE = (55,55,255)
 
 # Invisible mouse
 pygame.mouse.set_visible(False)
@@ -229,6 +230,7 @@ class HighScoreLine(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.rect.center = (highscore.x, height/2)
 		self.x, self.y = self.rect.center
+
 class Text(pygame.sprite.Sprite):
 	def __init__(self, msg, script, col, pos=(0, 0), shadow=None):
 		super().__init__()
@@ -323,41 +325,14 @@ def main():
 
 	while True:
 
-		# PlayerSpeed Text
-		ps1 = sub.render('Player Speed:', BG2, (55, 55, 255))
-		ps2 = sub.render(str(PlayerSpeed), BG2, (55, 55, 255))
+		pSpeed = Text(f"Player Speed: {PlayerSpeed}", sub, DARK_BLUE, shadow=(3, 2))
+		pScore = Text(f"Player Score: {int(p1.relpos.x//100)}", sub, DARK_BLUE, shadow=(3, 2))
+		curr_Score = Text(f"Current Highscore: {int(highscore.x//100)}", sub, DARK_BLUE, shadow=(3, 2))
 
-		# Rectangle
-		ps1Rect = ps1.get_rect()
-		ps2Rect = ps2.get_rect()
+		curr_Score.rect.midtop = screen.get_rect().midtop
+		pSpeed.rect.midtop = curr_Score.rect.midbottom
+		pScore.rect.midtop = pSpeed.rect.midbottom
 
-		# Position
-		ps1Rect.center = (width * 6//16, ps1.get_height()*3)
-		ps2Rect.center = (width * 11//16, ps2.get_height()*3)
-
-		# HUD highscore text
-		hs1 = sub.render('Current Highscore: ', BG2, (55,55,255))
-		hs2 = sub.render(str(highscore.x//100), BG2, (55, 55, 255))
-
-		# text rectangle
-		hs1Rect = hs1.get_rect()
-		hs2Rect = hs2.get_rect()
-
-		# Positioning text
-		hs1Rect.center = (width * 6//16, hs1.get_height())
-		hs2Rect.center = (width * 11//16, hs2.get_height())
-
-		# HUD Player text
-		score1 = sub.render('Player Score', BG2, (55,55,255))
-		score2 = sub.render(str(p1.relpos.x//100), BG2, (55,55,255))
-
-		# text rectangle
-		score1Rect = score1.get_rect()
-		score2Rect = score2.get_rect()
-
-		# Positioning text
-		score1Rect.center = (width * 6//16, score1.get_height()*2)
-		score2Rect.center = (width * 11//16, score2.get_height()*2)
 
 		# Window event handler
 		for event in pygame.event.get():
@@ -483,14 +458,9 @@ def main():
 		fgClouds.draw(screen)
 
 		# Sending Highscore and player score data to screen
-		screen.blit(hs1, hs1Rect)
-		screen.blit(hs2, hs2Rect)
-
-		screen.blit(score1, score1Rect)
-		screen.blit(score2, score2Rect)
-
-		screen.blit(ps1, ps1Rect)
-		screen.blit(ps2, ps2Rect)
+		screen.blit(pSpeed.image, pSpeed.rect)
+		screen.blit(pScore.image, pScore.rect)
+		screen.blit(curr_Score.image, curr_Score.rect)
 
 		# Refreshing screen
 		pygame.display.update()
