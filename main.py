@@ -451,7 +451,10 @@ def main():
 			# randomizing chance
 			# same logic as the seagull (l. 399) but with lava blocks
 			# but not dependent on distance
-			choice = random.randint(0, CHANCE)
+			if p1.relpos.x > 300*100:
+				choice = random.randint(0, CHANCE)
+			else:
+				choice = 1
 
 			if choice == 0:
 				new_plat = Platform(False)
@@ -495,7 +498,7 @@ def main():
 				plat.kill()
 
 		# Seagull will most likely spawn after player score is 30. May not happen at 30 due to chance of spawn
-		if p1.relpos.x > 512*100:
+		if p1.relpos.x > 700*100:
 			# Chance of a seagull spawning
 			choice = random.randint(0, CHANCE)
 
@@ -525,8 +528,6 @@ def main():
 
 			# 1/chancenumber divided by 105/100
 			CHANCE //=1.05
-
-		print(p1.relpos.x)
 
 
 		# Updating sprite groups
