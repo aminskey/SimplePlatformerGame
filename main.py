@@ -345,11 +345,6 @@ def main():
 
 	CHANCE = RATE
 
-	# Creating scoreLine
-	scoreLine = HighScoreLine()
-	if not firstTime:
-		all_sprites.add(scoreLine)
-
 	# defining player
 	p1 = Player()
 	all_sprites.add(p1)
@@ -390,11 +385,11 @@ def main():
 	pause_btn.rect.topright = screen.get_rect().topright
 
 	# Generating foreground and background clouds
-	for i in range(random.randint(7, 30)):
+	for i in range(random.randint(7, 15)):
 		if i < 5:
 			tmp = Clouds(f"platforms/platform_2.png")
 			tmp.rect.midleft = (random.randrange(width, width*2), random.randrange(height//2, height))
-			tmp.image.set_alpha(25)
+			tmp.image.set_alpha(30)
 
 			tmp.min = height//2
 			tmp.max = height * 3//4
@@ -517,8 +512,10 @@ def main():
 		if p1.relpos.x >= highscore:
 			highscore = p1.relpos.x
 
-		scoreLine.rect.x -= PlayerSpeed
-		hs.rect.x -= PlayerSpeed
+		if hs.alive():
+			hs.rect.x -= PlayerSpeed
+			if hs.rect.midright[0] < 0:
+				hs.kill()
 
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
