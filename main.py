@@ -42,6 +42,7 @@ GREY = (150, 150, 150)
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 DARK_BLUE = (55,55,255)
+BLUE = (0, 0, 255)
 
 # Invisible mouse
 #pygame.mouse.set_visible(False)
@@ -229,11 +230,15 @@ class HighScoreLine(pygame.sprite.Sprite):
 class Text(pygame.sprite.Sprite):
 	def __init__(self, msg, script, col, pos=(0, 0), shadow=None):
 		super().__init__()
+		self.hasToggled = False
+
 		if not isinstance(shadow, tuple):
 			self.image = script.render(msg, None, col)
 		else:
 			tmp = script.render(msg, None, col)
 			s_text = script.render(msg, None, BLACK)
+			self.toggled = script.render(msg, None, GREY)
+
 			self.image = pygame.Surface((tmp.get_width() + shadow[0], tmp.get_height() + shadow[1]))
 			self.image.fill((1, 0, 2))
 			self.image.set_colorkey((1, 0, 2))
@@ -241,9 +246,60 @@ class Text(pygame.sprite.Sprite):
 			self.image.blit(s_text, shadow)
 			self.image.blit(tmp, (0, 0))
 
+			self.copy = self.image.copy()
+
 		self.rect = self.image.get_rect()
 
 		self.rect.center = pos
+	def toggle(self):
+		if not self.hasToggled:
+			self.hasToggled = True
+			tmp = self.rect.center
+			self.image = self.toggled.copy()
+			self.rect = self.image.get_rect()
+			self.rect.center = tmp
+def settingScreen():
+	shade = pygame.Surface(screen.get_size())
+	shade.fill(BLUE)
+	shade.set_alpha(50)
+
+	global highscore
+
+	titlefont = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 55)
+	subfont = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 25)
+
+	title = Text("Settings", titlefont, WHITE, (screen.get_width()//2, screen.get_height()//3), (2, 2))
+	reset = Text("Reset Highscore", subfont, WHITE, screen.get_rect().center, (2, 2))
+	back = Text("Return", subfont, WHITE, shadow=(2,2))
+	back.rect.midtop = reset.rect.midbottom + vec(0, 3)
+
+	snd = pygame.mixer.Sound(f"{cwd}/sounds/gameOver.wav")
+	if highscore.length() <= 0:
+		reset.toggle()
+
+	while True:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				exit()
+			if event.type == MOUSEBUTTONUP:
+				p = pygame.mouse.get_pos()
+				if reset.rect.collidepoint(p):
+					snd.play()
+					highscore = vec(0, 0)
+					reset.toggle()
+					break
+				if back.rect.collidepoint(p):
+					return
+
+		screen.blit(shade, (0, 0))
+		screen.blit(title.image, title.rect)
+		screen.blit(reset.image, reset.rect)
+		screen.blit(back.image, back.rect)
+
+		pygame.display.update()
+		clock.tick(30)
+
 
 def pause():
 	shade = pygame.Surface(screen.get_size())
@@ -511,14 +567,10 @@ def startScreen():
 	title = Text(name, header, WHITE, (screen.get_rect().centerx, screen.get_height()//3), (2, 3))
 	subtitle = Text(ver, h2, WHITE)
 	start = Text("Press to Start", sub, WHITE, screen.get_rect().center + vec(0, 10), (2, 3))
-	reset = Text("Reset Highscore", sub, WHITE, shadow=(2, 3))
-	resetClicked = Text("Reset Highscore", sub, GREY)
-
-	reset.rect.midtop = start.rect.midbottom + vec(0, 3)
-	resetClicked.rect.center = reset.rect.center
+	settings = Button("misc/sett_btn.png")
+	settings.rect.topright = screen.get_rect().topright
 	subtitle.rect.midtop = title.rect.midbottom
 
-	hasReset = False
 	for i in range(30):
 		new_cloud = Clouds(pos=(random.randrange(0, width), random.randrange(0, height)))
 
@@ -533,23 +585,18 @@ def startScreen():
 
 	pygame.mixer.music.play(-1, 0)
 	while True:
-
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
 			if event.type == pygame.MOUSEBUTTONUP:
 				p = pygame.mouse.get_pos()
-				if start.rect.collidepoint(p):
-					if hasReset:
-						firstTime = True
+				if settings.rect.collidepoint(p):
+					settingScreen()
+					break
+				else:
 					main()
 					exit()
-				elif reset.rect.collidepoint(p):
-					pygame.mixer.Sound(f"{cwd}/sounds/gameOver.wav").play()
-					highscore = vec(0, 0)
-					hasReset = True
-					break
 
 		screen.fill(BG)
 
@@ -560,13 +607,13 @@ def startScreen():
 		screen.blit(title.image, title.rect)
 		screen.blit(subtitle.image, subtitle.rect)
 		screen.blit(start.image, start.rect)
-		if not firstTime:
-			if not hasReset:
-				screen.blit(reset.image, reset.rect)
-			else:
-				screen.blit(resetClicked.image, resetClicked.rect)
+		#if not firstTime:
+		#	if not hasReset:
+		#		screen.blit(reset.image, reset.rect)
+		#	else:
+		#		screen.blit(resetClicked.image, resetClicked.rect)
 		cloudsGroup2.draw(screen)
-		#screen.blit(play_btn.image, play_btn.rect)
+		screen.blit(settings.image, settings.rect)
 
 		pygame.display.update()
 		clock.tick(FPS)
