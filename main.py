@@ -264,6 +264,7 @@ def settingScreen():
 	shade.set_alpha(50)
 
 	global highscore
+	global firstTime
 
 	titlefont = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 55)
 	subfont = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 25)
@@ -286,6 +287,7 @@ def settingScreen():
 				p = pygame.mouse.get_pos()
 				if reset.rect.collidepoint(p):
 					snd.play()
+					firstTime = True
 					highscore = vec(0, 0)
 					reset.toggle()
 					break
