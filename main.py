@@ -40,6 +40,7 @@ BG2 = (100, 100, 255)
 WHITE = (255, 255, 255)
 GREY = (150, 150, 150)
 BLACK = (0, 0, 0)
+ORANGE = (255,165,0)
 GREEN = (0, 255, 0)
 DARK_BLUE = (55,55,255)
 BLUE = (0, 0, 255)
@@ -58,7 +59,7 @@ RATE = 124
 
 # Calculating Players position relative to start
 vec = pygame.math.Vector2
-highscore = vec(0, 0)
+highscore = 0
 
 # Are you playing the game for the first time?!?!?
 firstTime = True
@@ -218,14 +219,13 @@ class HighScoreLine(pygame.sprite.Sprite):
 	def __init__(self):
 		super().__init__()
 
-		self.image = pygame.Surface((20, height))
+		self.image = pygame.Surface((50, height))
 		self.image.fill((10, 10, 255))
 
 		self.image.set_alpha(50)
 
 		self.rect = self.image.get_rect()
-		self.rect.center = (highscore.x, height/2)
-		self.x, self.y = self.rect.center
+		self.rect.center = (highscore, height/2)
 
 class Text(pygame.sprite.Sprite):
 	def __init__(self, msg, script, col, pos=(0, 0), shadow=None):
@@ -275,7 +275,7 @@ def settingScreen():
 	back.rect.midtop = reset.rect.midbottom + vec(0, 3)
 
 	snd = pygame.mixer.Sound(f"{cwd}/sounds/gameOver.wav")
-	if highscore.length() <= 0:
+	if highscore <= 0:
 		reset.toggle()
 
 	while True:
@@ -288,7 +288,7 @@ def settingScreen():
 				if reset.rect.collidepoint(p):
 					snd.play()
 					firstTime = True
-					highscore = vec(0, 0)
+					highscore = 0
 					reset.toggle()
 					break
 				if back.rect.collidepoint(p):
@@ -369,6 +369,11 @@ def main():
 
 	# Creating font object
 	sub = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 25)
+	hd1 = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 50)
+
+	hs = Text("New Highscore", hd1, ORANGE, (highscore, screen.get_height()//3), (2, 3))
+	if not firstTime:
+		all_sprites.add(hs)
 
 	# choosing random background song.
 	pygame.mixer.music.load(f'{cwd}/BGM/main.ogg')
@@ -376,6 +381,9 @@ def main():
 
 	# frameCounter
 	count = 0
+
+	# speed up Counter
+	index = 1
 
 	# Pause Button
 	pause_btn = Button("misc/pause_btn.png")
@@ -407,7 +415,7 @@ def main():
 
 		pSpeed = Text(f"Player Speed: {PlayerSpeed}", sub, DARK_BLUE, shadow=(3, 2))
 		pScore = Text(f"Player Score: {int(p1.relpos.x//100)}", sub, DARK_BLUE, shadow=(3, 2))
-		curr_Score = Text(f"Current Highscore: {int(highscore.x//100)}", sub, DARK_BLUE, shadow=(3, 2))
+		curr_Score = Text(f"Current Highscore: {int(highscore//100)}", sub, DARK_BLUE, shadow=(3, 2))
 
 		curr_Score.rect.midtop = screen.get_rect().midtop
 		pScore.rect.midtop = curr_Score.rect.midbottom
@@ -436,11 +444,6 @@ def main():
 		# That the player is moving
 		for plat in platforms:
 			plat.rect.centerx -= PlayerSpeed
-
-		# if player's x is greater than highscore bar's x
-		# Then update it
-		if x > scoreLine.x:
-			scoreLine.x -= PlayerSpeed
 
 
 		# Put in for loop for user to increase game intensity
@@ -492,7 +495,7 @@ def main():
 				plat.kill()
 
 		# Seagull will most likely spawn after player score is 30. May not happen at 30 due to chance of spawn
-		if p1.relpos.x > 15000:
+		if p1.relpos.x > 512*100:
 			# Chance of a seagull spawning
 			choice = random.randint(0, CHANCE)
 
@@ -508,24 +511,22 @@ def main():
 
 		# Checking if player's relative position greater then highscore position
 		# If yes then update
-		if p1.relpos.x >= highscore.x:
-			highscore.x = p1.relpos.x
-			scoreLine.x = x
-		else:
-			scoreLine.x = highscore.x
+		if p1.relpos.x >= highscore:
+			highscore = p1.relpos.x
+
+		scoreLine.rect.x -= PlayerSpeed
+		hs.rect.x -= PlayerSpeed
 
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
-
-		if p1.relpos.x % 1000 == 0 and p1.relpos.x != 0:
+		if p1.relpos.x > (index*75*100):
 			PlayerSpeed += 1
+			index += 1
 
 			# 1/chancenumber divided by 105/100
 			CHANCE //=1.05
 
-
-		# Updating scoreline
-		scoreLine.rect.center = (scoreLine.x, height//2)
+		print(p1.relpos.x)
 
 
 		# Updating sprite groups
@@ -622,8 +623,8 @@ def startScreen():
 
 
 def gameOver(p1, highscore):
-	if p1.relpos.x >= highscore.x:
-		highscore.x = p1.relpos.x
+	if p1.relpos.x >= highscore:
+		highscore = p1.relpos.x
 
 
 	pygame.mixer.music.stop()
@@ -633,7 +634,7 @@ def gameOver(p1, highscore):
 
 	text = header.render('Game Over: ' + str(p1.relpos.x//100), BG, (255, 255, 255))
 	text2 = sub.render('Press anything to continue', BG, (255, 255, 255))
-	score = sub.render('Current Highscore: ' + str(highscore.x//100), BG, (255, 255, 255))
+	score = sub.render('Current Highscore: ' + str(highscore//100), BG, (255, 255, 255))
 
 	textRect = text.get_rect()
 	text2Rect = text2.get_rect()
