@@ -15,7 +15,7 @@ width, height = res
 
 # Game name
 name = 'Sky Dash'
-ver = '1.8.3'
+ver = '1.8.4'
 
 # Setting up window
 screen = pygame.display.set_mode(res, SCALED | FULLSCREEN)
@@ -522,7 +522,7 @@ def main():
 
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
-		if p1.relpos.x > (index*75*100):
+		if p1.relpos.x > (index*50*100):
 			PlayerSpeed += 1
 			index += 1
 
