@@ -23,7 +23,6 @@ pygame.display.set_caption(name)
 
 # get working directory
 cwd = os.getcwd()
-print(cwd)
 
 # Sprite Groups
 clouds = pygame.sprite.Group()
@@ -135,9 +134,22 @@ class Button(pygame.sprite.Sprite):
 	def __init__(self, image, pos=(0, 0)):
 		self.image = pygame.image.load(f"{cwd}/{image}")
 		self.rect = self.image.get_rect()
-		self.activated = False
 
 		self.rect.center = pos
+class Option(Button):
+	def __init__(self, text, script, col, func, pos=(0, 0), *ops):
+		self.text = Text(text, script, col)
+		self.image = pygame.transform.scale(pygame.image.load(f"{cwd}/misc/op_btn.png"), (self.text.image.get_width() * 3, self.text.image.get_height()*2))
+		self.rect = self.image.get_rect()
+		self.rect.center = pos
+
+		self.text.rect.topleft = (self.text.image.get_width(), self.text.image.get_height() * 1//2)
+		self.image.blit(self.text.image, self.text.rect)
+
+		self.func = func
+		self.ops = ops
+	def activate(self):
+		self.func(*self.ops)
 
 # Player class
 class Player(pygame.sprite.Sprite):
@@ -483,10 +495,13 @@ def main():
 
 		# Fixed Frame rate 120 recommended unless old computer
 		clock.tick(FPS)
-		print(clock.get_fps())
 		count += 1
 
 def startScreen():
+
+	global highscore
+	global firstTime
+
 	pygame.mixer.music.load(f'{cwd}/BGM/startup.ogg')
 	header = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 50)
 	sub = pygame.font.Font(f'{cwd}/fonts/pixelart.ttf', 25)
@@ -495,10 +510,15 @@ def startScreen():
 
 	title = Text(name, header, WHITE, (screen.get_rect().centerx, screen.get_height()//3), (2, 3))
 	subtitle = Text(ver, h2, WHITE)
-	start = Text("Press to start", sub, WHITE, screen.get_rect().center, (2, 3))
+	start = Text("Press to Start", sub, WHITE, screen.get_rect().center + vec(0, 10), (2, 3))
+	reset = Text("Reset Highscore", sub, WHITE, shadow=(2, 3))
+	resetClicked = Text("Reset Highscore", sub, GREY)
 
+	reset.rect.midtop = start.rect.midbottom + vec(0, 3)
+	resetClicked.rect.center = reset.rect.center
 	subtitle.rect.midtop = title.rect.midbottom
 
+	hasReset = False
 	for i in range(30):
 		new_cloud = Clouds(pos=(random.randrange(0, width), random.randrange(0, height)))
 
@@ -519,12 +539,17 @@ def startScreen():
 				pygame.quit()
 				sys.exit()
 			if event.type == pygame.MOUSEBUTTONUP:
-				for sprite in cloudsGroup2.sprites():
-					sprite.kill()
-				for sprite in cloudsGroup1.sprites():
-					sprite.kill()
-				main()
-				exit()
+				p = pygame.mouse.get_pos()
+				if start.rect.collidepoint(p):
+					if hasReset:
+						firstTime = True
+					main()
+					exit()
+				elif reset.rect.collidepoint(p):
+					pygame.mixer.Sound(f"{cwd}/sounds/gameOver.wav").play()
+					highscore = vec(0, 0)
+					hasReset = True
+					break
 
 		screen.fill(BG)
 
@@ -535,14 +560,19 @@ def startScreen():
 		screen.blit(title.image, title.rect)
 		screen.blit(subtitle.image, subtitle.rect)
 		screen.blit(start.image, start.rect)
+		if not firstTime:
+			if not hasReset:
+				screen.blit(reset.image, reset.rect)
+			else:
+				screen.blit(resetClicked.image, resetClicked.rect)
 		cloudsGroup2.draw(screen)
+		#screen.blit(play_btn.image, play_btn.rect)
 
 		pygame.display.update()
 		clock.tick(FPS)
 
 
 def gameOver(p1, highscore):
-	pygame.mixer.music.load(f'{cwd}/sounds/gameOver.ogg')
 	if p1.relpos.x >= highscore.x:
 		highscore.x = p1.relpos.x
 
@@ -568,8 +598,9 @@ def gameOver(p1, highscore):
 	screen.blit(score, scoreRect)
 	screen.blit(text2, text2Rect)
 
-	pygame.mixer.music.play(0, 0)
 	pygame.display.flip()
+
+	pygame.mixer.Sound(f"{cwd}/sounds/gameOver.wav").play()
 
 	while True:
 		for event in pygame.event.get():
