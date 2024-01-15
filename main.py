@@ -51,9 +51,6 @@ BLUE = (0, 0, 255)
 # Initial Player speed
 PSD = 8
 
-# player speed
-PlayerSpeed = PSD
-
 RATE = 124
 # 1/256 = 0.25% chance of lava block
 
@@ -121,8 +118,8 @@ class Seagull(pygame.sprite.Sprite):
 		self.rect.topleft = (random.randrange(width, width * 2), random.randrange(0, height//6))
 
 	# Update mechanism
-	def update(self):
-		self.rect.x -= PlayerSpeed * 1.15
+	def update(self, speed):
+		self.rect.x -= speed * 1.15
 		# if seagull out of screen then kill it
 		if self.rect.midleft[0] < 0:
 			all_sprites.remove(self)
@@ -171,6 +168,7 @@ class Player(pygame.sprite.Sprite):
 
 		self.jumpstate = True
 		self.isStuck = False
+		self.speed = 0
 
 	# Jump mechanism
 	def jump(self, jumpSpeed = 25):
@@ -197,7 +195,7 @@ class Player(pygame.sprite.Sprite):
 			# If player collides with platform and is deep in the block
 			# Then stop all motion except for jumping mechanism
 			if self.rect.centery < plat.rect.midbottom[1] and self.rect.centery > plat.rect.midtop[1]:
-				self.rect.x -= PlayerSpeed
+				self.rect.x -= self.speed
 				self.isStuck = True
 		else:
 			self.gravity()
@@ -211,7 +209,7 @@ class Player(pygame.sprite.Sprite):
 				self.rect.centerx += 2
 
 		# Updating relative position
-		self.relpos.x += PlayerSpeed
+		self.relpos.x += self.speed
 
 
 # ScoreLine class
@@ -265,6 +263,7 @@ def settingScreen():
 
 	global highscore
 	global firstTime
+	global PSD
 
 	titlefont = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 55)
 	subfont = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 25)
@@ -272,7 +271,26 @@ def settingScreen():
 	title = Text("Settings", titlefont, WHITE, (screen.get_width()//2, screen.get_height()//3), (2, 2))
 	reset = Text("Reset Highscore", subfont, WHITE, screen.get_rect().center, (2, 2))
 	back = Text("Return", subfont, WHITE, shadow=(2,2))
-	back.rect.midtop = reset.rect.midbottom + vec(0, 3)
+	selDif = Text("Select Difficulty: ", subfont, WHITE, shadow=(2, 2))
+
+	selDif.rect.midtop = reset.rect.midbottom + vec(0, 3)
+	back.rect.midtop = selDif.rect.midbottom + vec(0, 3)
+
+	easy = Text("Easy", subfont, WHITE, shadow=(2, 2))
+	mid = Text("Medium", subfont, WHITE, shadow=(2, 2))
+	hard = Text("Hard", subfont, WHITE, shadow=(2, 2))
+	hardcore = Text("HARDCORE!!!", subfont, WHITE, shadow=(2, 2))
+
+	diffList = [easy, mid, hard, hardcore]
+
+	index = 1
+
+	diffDict = {
+		easy: 6,
+		mid: 8,
+		hard: 10,
+		hardcore: 12
+	}
 
 	snd = pygame.mixer.Sound(f"{cwd}/sounds/gameOver.wav")
 	if highscore <= 0:
@@ -292,10 +310,23 @@ def settingScreen():
 					reset.toggle()
 					break
 				if back.rect.collidepoint(p):
+					PSD = diffDict[diffList[index]]
 					return
+				if selDif.rect.collidepoint(p) or diffList[index].rect.collidepoint(p):
+					index += 1
+					if index > len(diffList) - 1:
+						index = 0
+						break
+					if index < 0:
+						index = len(diffList) - 1
+						break
+
+		diffList[index].rect.midleft = selDif.rect.midright
 
 		screen.blit(shade, (0, 0))
 		screen.blit(title.image, title.rect)
+		screen.blit(selDif.image, selDif.rect)
+		screen.blit(diffList[index].image, diffList[index].rect)
 		screen.blit(reset.image, reset.rect)
 		screen.blit(back.image, back.rect)
 
@@ -340,15 +371,16 @@ def main():
 
 	# Importing global variables
 	global highscore
-	global PlayerSpeed
 	global firstTime
 
 	CHANCE = RATE
 
 	# defining player
 	p1 = Player()
+	p1.speed = PSD
 	all_sprites.add(p1)
 	players.add(p1)
+
 
 	# Defining ground platform
 	plat1 = Platform(True, f'{cwd}/platforms/platform_0.png')
@@ -408,7 +440,7 @@ def main():
 
 	while True:
 
-		pSpeed = Text(f"Player Speed: {PlayerSpeed}", sub, DARK_BLUE, shadow=(3, 2))
+		pSpeed = Text(f"Player Speed: {p1.speed}", sub, DARK_BLUE, shadow=(3, 2))
 		pScore = Text(f"Player Score: {int(p1.relpos.x//100)}", sub, DARK_BLUE, shadow=(3, 2))
 		curr_Score = Text(f"Current Highscore: {int(highscore//100)}", sub, DARK_BLUE, shadow=(3, 2))
 
@@ -438,7 +470,7 @@ def main():
 		# Making the platforms move to create an illusion
 		# That the player is moving
 		for plat in platforms:
-			plat.rect.centerx -= PlayerSpeed
+			plat.rect.centerx -= p1.speed
 
 
 		# Put in for loop for user to increase game intensity
@@ -469,7 +501,7 @@ def main():
 		# checking if the player died
 		# If it happened then reset settings and run gameOver method
 		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False) or x < 0:
-			PlayerSpeed = PSD
+			p1.speed = PSD
 			CHANCE = 128
 			if firstTime:
 				firstTime = False
@@ -513,14 +545,14 @@ def main():
 			highscore = p1.relpos.x
 
 		if hs.alive():
-			hs.rect.x -= PlayerSpeed
+			hs.rect.x -= p1.speed
 			if hs.rect.midright[0] < 0:
 				hs.kill()
 
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
 		if p1.relpos.x > (index*50*100):
-			PlayerSpeed += 1
+			p1.speed += 1
 			index += 1
 
 			# 1/chancenumber divided by 105/100
@@ -529,8 +561,8 @@ def main():
 
 		# Updating sprite groups
 		clouds.update()
-		fgClouds.update(PlayerSpeed + 1)
-		seagulls.update()
+		fgClouds.update(p1.speed + 1)
+		seagulls.update(p1.speed)
 		p1.update()
 
 		# Drawing all sprites to screen
