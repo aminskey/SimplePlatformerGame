@@ -7,7 +7,10 @@ pygame.init()
 
 # Create FPS handler
 clock = pygame.time.Clock()
-FPS = 60
+FPS = 45
+maxFPS = 60
+
+deltaTime = maxFPS/FPS
 
 # resolution tuple
 res = (800, 430)
@@ -82,7 +85,7 @@ class Clouds(pygame.sprite.Sprite):
 			self.rect.midleft = (width, random.randrange(self.min, self.max))
 
 		# slowly drift backwards creating virtual effect
-		self.rect.x -= speed
+		self.rect.x -= speed*deltaTime
 
 # platform mechanism
 class Platform(pygame.sprite.Sprite):
@@ -119,7 +122,7 @@ class Seagull(pygame.sprite.Sprite):
 
 	# Update mechanism
 	def update(self, speed):
-		self.rect.x -= speed * 1.15
+		self.rect.x -= speed * 1.15 * deltaTime
 		# if seagull out of screen then kill it
 		if self.rect.midleft[0] < 0:
 			all_sprites.remove(self)
@@ -195,7 +198,7 @@ class Player(pygame.sprite.Sprite):
 			# If player collides with platform and is deep in the block
 			# Then stop all motion except for jumping mechanism
 			if self.rect.centery < plat.rect.midbottom[1] and self.rect.centery > plat.rect.midtop[1]:
-				self.rect.x -= self.speed
+				self.rect.x -= self.speed*deltaTime
 				self.isStuck = True
 		else:
 			self.gravity()
@@ -206,10 +209,10 @@ class Player(pygame.sprite.Sprite):
 			# if the player is not at the center of the screen
 			# Then move it towards the center
 			if screen.get_rect().centerx - self.rect.centerx > 0:
-				self.rect.centerx += 2
+				self.rect.centerx += 2*deltaTime
 
 		# Updating relative position
-		self.relpos.x += self.speed
+		self.relpos.x += self.speed*deltaTime
 
 
 # ScoreLine class
@@ -439,8 +442,7 @@ def main():
 
 
 	while True:
-
-		pSpeed = Text(f"Player Speed: {p1.speed}", sub, DARK_BLUE, shadow=(3, 2))
+		pSpeed = Text(f"Player Speed: {int(p1.speed)}", sub, DARK_BLUE, shadow=(3, 2))
 		pScore = Text(f"Player Score: {int(p1.relpos.x//100)}", sub, DARK_BLUE, shadow=(3, 2))
 		curr_Score = Text(f"Current Highscore: {int(highscore//100)}", sub, DARK_BLUE, shadow=(3, 2))
 
@@ -470,7 +472,7 @@ def main():
 		# Making the platforms move to create an illusion
 		# That the player is moving
 		for plat in platforms:
-			plat.rect.centerx -= p1.speed
+			plat.rect.centerx -= p1.speed*deltaTime
 
 
 		# Put in for loop for user to increase game intensity
@@ -501,7 +503,7 @@ def main():
 		# checking if the player died
 		# If it happened then reset settings and run gameOver method
 		if y > height * 2 or pygame.sprite.spritecollide(p1, danger, False) or x < 0:
-			p1.speed = PSD
+			p1.speed = PSD*deltaTime
 			CHANCE = 128
 			if firstTime:
 				firstTime = False
@@ -552,7 +554,7 @@ def main():
 		# When players score divided by 100 gives a remainder of 0.
 		# And if player score not zero its self
 		if p1.relpos.x > (index*50*100):
-			p1.speed += 1
+			p1.speed += 1*deltaTime
 			index += 1
 
 			# 1/chancenumber divided by 105/100
