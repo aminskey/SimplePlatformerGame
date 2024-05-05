@@ -7,7 +7,7 @@ pygame.init()
 
 # Create FPS handler
 clock = pygame.time.Clock()
-FPS = 45
+FPS = 40
 maxFPS = 60
 
 deltaTime = maxFPS/FPS
@@ -232,6 +232,7 @@ class Text(pygame.sprite.Sprite):
 	def __init__(self, msg, script, col, pos=(0, 0), shadow=None):
 		super().__init__()
 		self.hasToggled = False
+		self.msg = msg
 
 		if not isinstance(shadow, tuple):
 			self.image = script.render(msg, None, col)
@@ -267,6 +268,7 @@ def settingScreen():
 	global highscore
 	global firstTime
 	global PSD
+	global FPS
 
 	titlefont = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 55)
 	subfont = pygame.font.Font(f"{cwd}/fonts/pixelart.ttf", 25)
@@ -275,9 +277,11 @@ def settingScreen():
 	reset = Text("Reset Highscore", subfont, WHITE, screen.get_rect().center, (2, 2))
 	back = Text("Return", subfont, WHITE, shadow=(2,2))
 	selDif = Text("Select Difficulty: ", subfont, WHITE, shadow=(2, 2))
+	selfps = Text("Select FPS: ", subfont, WHITE, shadow=(2,2))
 
 	selDif.rect.midtop = reset.rect.midbottom + vec(0, 3)
-	back.rect.midtop = selDif.rect.midbottom + vec(0, 3)
+	selfps.rect.midtop = selDif.rect.midbottom + vec(0,3)
+	back.rect.midtop = selfps.rect.midbottom + vec(0, 3)
 
 	easy = Text("Easy", subfont, WHITE, shadow=(2, 2))
 	mid = Text("Medium", subfont, WHITE, shadow=(2, 2))
@@ -285,8 +289,12 @@ def settingScreen():
 	hardcore = Text("HARDCORE!!!", subfont, WHITE, shadow=(2, 2))
 
 	diffList = [easy, mid, hard, hardcore]
-
-	index = 1
+	fpsList = [
+		Text("30", subfont, WHITE, shadow=(2,2)),
+		Text("40", subfont, WHITE, shadow=(2, 2)),
+		Text("50", subfont, WHITE, shadow=(2, 2)),
+		Text("60", subfont, WHITE, shadow=(2, 2))
+	]
 
 	diffDict = {
 		easy: 6,
@@ -294,6 +302,13 @@ def settingScreen():
 		hard: 10,
 		hardcore: 12
 	}
+
+	index = list(diffDict.values()).index(PSD)
+
+	try:
+		fpsIndex = [int(k.msg) for k in fpsList].index(FPS)
+	except ValueError:
+		fpsIndex = 0
 
 	snd = pygame.mixer.Sound(f"{cwd}/sounds/gameOver.wav")
 	if highscore <= 0:
@@ -314,6 +329,7 @@ def settingScreen():
 					break
 				if back.rect.collidepoint(p):
 					PSD = diffDict[diffList[index]]
+					FPS = int(fpsList[fpsIndex].msg)
 					return
 				if selDif.rect.collidepoint(p) or diffList[index].rect.collidepoint(p):
 					index += 1
@@ -323,13 +339,24 @@ def settingScreen():
 					if index < 0:
 						index = len(diffList) - 1
 						break
+				if selfps.rect.collidepoint(p) or fpsList[index].rect.collidepoint(p):
+					fpsIndex += 1
+					if fpsIndex > len(fpsList) - 1:
+						fpsIndex = 0
+						break
+					if fpsIndex < 0:
+						fpsIndex = len(fpsList) - 1
+						break
 
 		diffList[index].rect.midleft = selDif.rect.midright
+		fpsList[fpsIndex].rect.midleft = selfps.rect.midright
 
 		screen.blit(shade, (0, 0))
 		screen.blit(title.image, title.rect)
 		screen.blit(selDif.image, selDif.rect)
+		screen.blit(selfps.image, selfps.rect)
 		screen.blit(diffList[index].image, diffList[index].rect)
+		screen.blit(fpsList[fpsIndex].image, fpsList[fpsIndex].rect)
 		screen.blit(reset.image, reset.rect)
 		screen.blit(back.image, back.rect)
 
@@ -547,7 +574,7 @@ def main():
 			highscore = p1.relpos.x
 
 		if hs.alive():
-			hs.rect.x -= p1.speed
+			hs.rect.x -= p1.speed*deltaTime
 			if hs.rect.midright[0] < 0:
 				hs.kill()
 
