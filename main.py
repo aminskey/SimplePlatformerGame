@@ -18,7 +18,7 @@ width, height = res
 
 # Game name
 name = 'Sky Dash'
-ver = '1.8.4'
+ver = '1.8.5'
 
 # Setting up window
 screen = pygame.display.set_mode(res, SCALED | FULLSCREEN)
